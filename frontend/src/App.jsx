@@ -9,6 +9,7 @@ import "./App.css";
 function App() {
   const [userEmail, setUserEmail] = useState(null);
   const [emailLoaded, setEmailLoaded] = useState(false);
+  const [showEmailGate, setShowEmailGate] = useState(false);
 
 
   useEffect(() => {
