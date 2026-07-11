@@ -24,7 +24,17 @@ function App() {
 
   return (
     <BrowserRouter>
-      {!userEmail && <EmailGate onSubmit={handleEmailSubmit} />}
+    {(!userEmail || showEmailGate) && (
+      <EmailGate
+        onSubmit={(email) => {
+          localStorage.setItem("linetracker_email", email);
+          setUserEmail(email);
+          setShowEmailGate(false);
+        }}
+        onCancel={userEmail ? () => setShowEmailGate(false) : null}
+      />
+    )}
+      
       <div className="app-shell">
         <header className="app-header">
           <div className="app-header-inner">
@@ -44,19 +54,18 @@ function App() {
                 className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
               >
                 Bets 🎟️
-              </NavLink>
+
+             </NavLink>
               {userEmail && (
                 <button
                   className="nav-link"
-                  onClick={() => {
-                    localStorage.removeItem("linetracker_email");
-                    setUserEmail(null);
-                  }}
+                  onClick={() => setShowEmailGate(true)}
                   style={{ cursor: "pointer", border: "none", background: "transparent" }}
                 >
                   {userEmail} ✕
                 </button>
               )}
+
             </nav>
 
           </div>
