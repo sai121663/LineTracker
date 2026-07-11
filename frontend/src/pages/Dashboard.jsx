@@ -1,0 +1,177 @@
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { getAlerts, deleteAlert } from "../api";
+import "./Dashboard.css";
+
+function formatOdds(price) {
+  if (price === null || price === undefined) return "—";
+  return price > 0 ? `+${price}` : `${price}`;
+}
+
+function formatValue(alert) {
+  if (alert.alert_type === "Stock 🌱") {
+    return alert.current_value !== null && alert.current_value !== undefined
+      ? `$${parseFloat(alert.current_value).toFixed(2)}`
+      : "—";
+  }
+  return formatOdds(alert.current_value);
+}
+
+function formatTarget(alert) {
+  if (alert.alert_type === "Stock 🌱") return `$${parseFloat(alert.target_value).toFixed(2)}`;
+  return formatOdds(alert.target_value);
+}
+
+function alertTitle(alert) {
+  if (alert.alert_type === "Stock 🌱") return alert.ticker;
+  return alert.outcome_name || `${alert.home_team} vs ${alert.away_team}`;
+}
+
+function alertSubtitle(alert) {
+  if (alert.alert_type === "Stock 🌱") return alert.company_name;
+  if (!alert.home_team || !alert.away_team) return "Bet";
+  const opponent = alert.outcome_name === alert.home_team ? alert.away_team : alert.home_team;
+  return `vs ${opponent}`;
+}
+
+export default function Dashboard({ userEmail }) {
+
+  const LOGOKIT_TOKEN = import.meta.env.VITE_LOGOKIT_API_TOKEN;
+
+  const [alerts, setAlerts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  async function loadAlerts() {
+    try {
+      setLoading(true);
+      const data = await getAlerts(userEmail);
+      setAlerts(data);
+      setError(null);
+    } catch (err) {
+      setError("Could not reach the backend. Is the Flask server running?");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadAlerts();
+  }, []);
+
+  async function handleDelete(id) {
+    try {
+      await deleteAlert(id);
+      setAlerts((prev) => prev.filter((a) => a.id !== id));
+    } catch (err) {
+      console.error("Failed to delete alert", err);
+    }
+  }
+
+  const active = alerts.filter((a) => !a.triggered);
+  const triggered = alerts.filter((a) => a.triggered);
+
+  return (
+    <div className="dashboard">
+      <div className="dashboard-head">
+        <h1>Your alerts</h1>
+        <div className="dashboard-actions">
+          <Link to="/stocks" className="btn btn-ghost">+ Stock</Link>
+          <Link to="/bets" className="btn btn-primary">+ Bet</Link>
+        </div>
+      </div>
+
+      {loading && <p className="dim-text">Loading alerts…</p>}
+
+      {error && (
+        <div className="error-box">
+          <p>{error}</p>
+        </div>
+      )}
+
+      {!loading && !error && alerts.length === 0 && (
+        <div className="empty-state">
+          <p className="empty-title">No alerts yet</p>
+          <p className="dim-text">
+            Track a stock's price or a betting line — you'll get an email the moment it crosses your target.
+          </p>
+        </div>
+      )}
+
+      {active.length > 0 && (
+        <section className="alert-section">
+          <h2 className="section-label">Active <span className="count-badge">{active.length}</span></h2>
+          <div className="alert-list">
+            {active.map((alert) => (
+              <div className="alert-card" key={alert.id}>
+                
+                {alert.alert_type === "Stock 🌱" ? (
+                  <img
+                    src={`https://img.logokit.com/ticker/${alert.ticker}?token=${LOGOKIT_TOKEN}`}
+                    alt={alert.ticker}
+                    className="alert-team-logo"
+                    onError={(e) => { e.target.style.display = "none"; }}
+                  />
+                ) : (() => {
+                  const logo = alert.outcome_name === alert.home_team ? alert.home_logo : alert.away_logo;
+                  return logo ? (
+                    <img
+                      src={logo}
+                      alt={alert.outcome_name}
+                      className="alert-team-logo"
+                      onError={(e) => { e.target.style.display = "none"; }}
+                    />
+                  ) : null;
+                })()}
+
+                <div className="alert-card-main">
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                    <div className="alert-card-type">{alert.alert_type}</div>
+                  </div>
+                  <p className="alert-card-title">{alertTitle(alert)}</p>
+                  <p className="alert-card-subtitle">{alertSubtitle(alert)}</p>
+                  {alert.alert_type === "Stock 🌱" ? (
+                    alert.created_at && (
+                      <span className="alert-date">
+                        {new Date(alert.created_at + "Z").toLocaleDateString(undefined, {
+                          month: "short", day: "numeric", hour: "numeric", minute: "2-digit"
+                        })}
+                      </span>
+                    )
+                  ) : (
+                    alert.commence_time && (
+                      <span className="alert-date">
+                        {new Date(alert.commence_time).toLocaleDateString(undefined, {
+                          month: "short", day: "numeric", hour: "numeric", minute: "2-digit"
+                        })}
+                      </span>
+                    )
+                  )}
+                </div>
+
+                <div className="alert-card-values">
+                  <div className="pill-group">
+                    <span className="pill-label">Now</span>
+                    <span className="pill neutral">{formatValue(alert)}</span>
+                  </div>
+                  <span className={`arrow ${alert.direction === "above" ? "arrow-success" : "arrow-danger"}`}>→</span>
+                  <div className="pill-group">
+                    <span className="pill-label">Target</span>
+                    <span className={`pill ${alert.direction === "above" ? "pill-success" : "pill-danger"}`}>
+                      {formatTarget(alert)}
+                    </span>
+                  </div>
+                </div>
+
+                <button className="icon-btn" onClick={() => handleDelete(alert.id)} aria-label="Delete alert">
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+    </div>
+  );
+}

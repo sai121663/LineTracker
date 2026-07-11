@@ -1,0 +1,390 @@
+.bet-search h1 {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-bottom: 6px;
+}
+
+.steps-indicator {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+
+.step-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px 12px 5px 8px;
+}
+
+.step-num {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--surface-raised);
+  font-size: 10px;
+  font-family: var(--font-mono);
+}
+
+.step-pill.active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.step-pill.active .step-num {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.step-pill.done {
+  color: var(--success);
+  border-color: var(--success-dim);
+}
+
+.step-pill.done .step-num {
+  background: var(--success-dim);
+  color: var(--success);
+}
+
+.option-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.option-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: center;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.option-card:hover {
+  border-color: var(--accent);
+  background: var(--surface-raised);
+}
+
+.option-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.event-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+  text-align: left;
+  width: 100%;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.event-card:hover {
+  border-color: var(--accent);
+  background: var(--surface-raised);
+}
+
+.event-teams {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.event-time {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-primary);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-bright);
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+.odds-num {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.back-link {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin-top: 18px;
+  padding: 6px 0;
+}
+
+.back-link:hover {
+  color: var(--text-primary);
+}
+
+.event-count {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  font-family: var(--font-mono);
+}
+
+.btn-ghost {
+  background: var(--text-primary);
+  border-color: var(--text-primary);
+  color: var(--bg);
+}
+
+.btn-ghost:hover {
+  background: var(--text-secondary);
+  border-color: var(--text-secondary);
+}
+
+.sports-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 0;
+  font-family: 'Pixelify Sans', monospace;
+  font-size: 36px;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+}
+
+.event-group {
+  margin-bottom: 20px;
+}
+
+.event-date-heading {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  padding-left: 2px;
+}
+
+.event-live {
+  border-color: var(--danger);
+  background: var(--danger-dim);
+}
+
+.event-live:hover {
+  border-color: var(--danger);
+  background: var(--danger-dim);
+  opacity: 0.85;
+}
+
+.event-upcoming {
+  border-color: var(--success-dim);
+  background: var(--success-dim);
+}
+
+.event-upcoming:hover {
+  border-color: var(--success);
+  opacity: 0.85;
+}
+
+.live-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  background: var(--danger);
+  color: white;
+  padding: 3px 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.event-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bookmaker-card {
+  display: flex;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.bookmaker-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 110px;
+  padding: 16px 12px;
+  background: var(--surface-raised);
+  border-right: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: center;
+  word-break: break-word;
+}
+
+.bookmaker-outcomes {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.outcome-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.outcome-btn:last-child {
+  border-bottom: none;
+}
+
+.outcome-btn:hover {
+  background: var(--surface-raised);
+}
+
+.outcome-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.bookmaker-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 110px;
+  padding: 16px 12px;
+  background: var(--surface-raised);
+  border-right: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: center;
+  word-break: break-word;
+}
+
+.bookmaker-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  object-fit: contain;
+}
+
+.bookmaker-label span {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+.bet-result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: 28px;
+}
+
+.bet-result-bookmaker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 110px;
+  padding: 16px 12px;
+  background: var(--surface-raised);
+  border-right: 1px solid var(--border);
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--text-primary);
+  text-align: center;
+  word-break: break-word;
+  align-self: stretch;
+}
+
+.bet-result-main {
+  flex: 1;
+  padding: 16px 20px;
+}
+
+.bet-result .result-price {
+  padding-right: 20px;
+  flex-shrink: 0;
+}
+
+.slider-target-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.team-with-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.vs-text {
+  font-weight: 400;
+  color: var(--text-secondary);
+  vertical-align: middle;
+}
+
+.team-logo-small {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
