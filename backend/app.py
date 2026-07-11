@@ -18,7 +18,7 @@ app = Flask(__name__)
 CORS(app)
 
 sports_cache = {}
-CACHE_TTL = 300  # cache results for 5 minutes
+CACHE_TTL = 150  # cache results for 5 minutes
 
 # --- Database config ---
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///lineminder.db"
