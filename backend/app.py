@@ -341,6 +341,7 @@ def list_alerts():
         alerts = Alert.query.filter_by(triggered=False).order_by(Alert.created_at.desc()).all()
     return jsonify([a.to_dict() for a in alerts])
 
+
 @app.route("/alerts/<int:alert_id>", methods=["GET"])
 def get_alert(alert_id):
     alert = Alert.query.get(alert_id)
@@ -387,4 +388,4 @@ scheduler.start()
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000, use_reloader=False)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), use_reloader=False)

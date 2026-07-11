@@ -8,10 +8,13 @@ import "./App.css";
 
 function App() {
   const [userEmail, setUserEmail] = useState(null);
+  const [emailLoaded, setEmailLoaded] = useState(false);
+
 
   useEffect(() => {
     const stored = localStorage.getItem("linetracker_email");
     if (stored) setUserEmail(stored);
+    setEmailLoaded(true);
   }, []);
 
   function handleEmailSubmit(email) {
@@ -28,6 +31,7 @@ function App() {
             <Link to="/" className="logo-link">
               LINE<span className="logo-accent">TRACKER</span>
             </Link>
+
             <nav className="main-nav">
               <NavLink
                 to="/stocks"
@@ -41,16 +45,31 @@ function App() {
               >
                 Bets 🎟️
               </NavLink>
+              {userEmail && (
+                <button
+                  className="nav-link"
+                  onClick={() => {
+                    localStorage.removeItem("linetracker_email");
+                    setUserEmail(null);
+                  }}
+                  style={{ cursor: "pointer", border: "none", background: "transparent" }}
+                >
+                  {userEmail} ✕
+                </button>
+              )}
             </nav>
+
           </div>
         </header>
 
         <main className="app-main">
-          <Routes>
-            <Route path="/" element={<Dashboard userEmail={userEmail} />} />
-            <Route path="/stocks" element={<StockSearch userEmail={userEmail} />} />
-            <Route path="/bets" element={<BetSearch userEmail={userEmail} />} />
-          </Routes>
+          {emailLoaded && (
+            <Routes>
+              <Route path="/" element={<Dashboard userEmail={userEmail} />} />
+              <Route path="/stocks" element={<StockSearch userEmail={userEmail} />} />
+              <Route path="/bets" element={<BetSearch userEmail={userEmail} />} />
+            </Routes>
+          )}
         </main>
       </div>
     </BrowserRouter>

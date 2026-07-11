@@ -43,6 +43,7 @@ export default function Dashboard({ userEmail }) {
   const [error, setError] = useState(null);
 
   async function loadAlerts() {
+    console.log("loading alerts for email:", userEmail);
     try {
       setLoading(true);
       const data = await getAlerts(userEmail);
@@ -58,6 +59,12 @@ export default function Dashboard({ userEmail }) {
   useEffect(() => {
     loadAlerts();
   }, []);
+
+  useEffect(() => {
+    if (userEmail) {
+      loadAlerts();
+    }
+  }, [userEmail]);
 
   async function handleDelete(id) {
     try {
