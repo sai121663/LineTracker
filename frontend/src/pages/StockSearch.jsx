@@ -315,7 +315,7 @@ async function selectSuggestion(symbol, name) {
                 />
                 <div className="slider-labels">
                   <span>${(stock.price * 0.5).toFixed(2)}</span>
-                  <span className="slider-current-marker">Current: ${stock.price}</span>
+                  <span className="slider-current-marker">Current: ${stock.price.toFixed(2)}</span>
                   <span>${(stock.price * 1.5).toFixed(2)}</span>
                 </div>
               </div>
