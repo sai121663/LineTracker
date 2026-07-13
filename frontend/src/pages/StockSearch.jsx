@@ -232,7 +232,7 @@ async function selectSuggestion(symbol, name) {
             </div>
           </div>
           
-            <p className="result-price">${stock.price}</p>
+            <p className="result-price">${stock.price.toFixed(2)}</p>
           </div>
 
           <form className="alert-form" onSubmit={handleSaveAlert}>
