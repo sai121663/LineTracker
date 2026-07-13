@@ -361,6 +361,10 @@ def delete_alert(alert_id):
 
     return jsonify({"message": f"Alert {alert_id} deleted"})
 
+# UptimeRobot wakes the server up every 5 minutes
+@app.route("/ping", methods=["GET"])
+def ping():
+    return jsonify({"status": "alive"})
 
 # --- Manual trigger route (for testing the poller on demand) ---
 @app.route("/poll-now", methods=["POST"])
