@@ -160,16 +160,21 @@ def get_odds():
 
     # Builds events_map
     for row in all_rows:
+
         event_id = row.get("event_id")
+
         if not event_id:
             continue
 
-        if event_id not in events_map:
+        event_date = (row.get("event_start_time") or "")[:10]
+        event_key = f"{row.get('home_team')}_{row.get('away_team')}_{event_date}"
+
+        if event_key not in events_map:
             home_name = (row.get("home") or {}).get("name") or row.get("home_team", "")
             away_name = (row.get("away") or {}).get("name") or row.get("away_team", "")
             home_logo = (row.get("home") or {}).get("logo", "")
             away_logo = (row.get("away") or {}).get("logo", "")
-            events_map[event_id] = {
+            events_map[event_key] = {
                 "id": event_id,
                 "sport": sport,
                 "commence_time": row.get("event_start_time"),
@@ -178,33 +183,33 @@ def get_odds():
                 "home_logo": home_logo,
                 "away_logo": away_logo,
                 "bookmakers": {},
-            }
+                }
 
         # Update with full names if we get a FanDuel row (which has home/away objects)
-        if row.get("home") and not events_map[event_id]["home_team"].count(" ") > 1:
-            events_map[event_id]["home_team"] = row["home"]["name"]
-        if row.get("away") and not events_map[event_id]["away_team"].count(" ") > 1:
-            events_map[event_id]["away_team"] = row["away"]["name"]
+        if row.get("home") and not events_map[event_key]["home_team"].count(" ") > 1:
+            events_map[event_key]["home_team"] = row["home"]["name"]
+        if row.get("away") and not events_map[event_key]["away_team"].count(" ") > 1:
+            events_map[event_key]["away_team"] = row["away"]["name"]
 
         # Use full name from home/away objects if available, otherwise use home_team field
-        if not events_map[event_id]["home_team"] and row.get("home"):
-            events_map[event_id]["home_team"] = row["home"]["name"]
-        if not events_map[event_id]["away_team"] and row.get("away"):
-            events_map[event_id]["away_team"] = row["away"]["name"]
+        if not events_map[event_key]["home_team"] and row.get("home"):
+            events_map[event_key]["home_team"] = row["home"]["name"]
+        if not events_map[event_key]["away_team"] and row.get("away"):
+            events_map[event_key]["away_team"] = row["away"]["name"]
 
         sportsbook_key = row.get("sportsbook")
         sportsbook_label = (row.get("sportsbook_ref") or {}).get("label") or sportsbook_key.title()
 
-        if sportsbook_key not in events_map[event_id]["bookmakers"]:
-            events_map[event_id]["bookmakers"][sportsbook_key] = {
+        if sportsbook_key not in events_map[event_key]["bookmakers"]:
+            events_map[event_key]["bookmakers"][sportsbook_key] = {
                 "title": sportsbook_label,
                 "markets": {
                     market: {"key": market, "outcomes": []}
                 },
             }
 
-        if market not in events_map[event_id]["bookmakers"][sportsbook_key]["markets"]:
-            events_map[event_id]["bookmakers"][sportsbook_key]["markets"][market] = {
+        if market not in events_map[event_key]["bookmakers"][sportsbook_key]["markets"]:
+            events_map[event_key]["bookmakers"][sportsbook_key]["markets"][market] = {
                 "key": market,
                 "outcomes": [],
             }
@@ -229,7 +234,7 @@ def get_odds():
         if "Montreal" in (row.get("home_team") or "") or "Montreal" in (row.get("selection") or ""):
             print(f"[debug] Montreal row: selection={row.get('selection')}, selection_type={row.get('selection_type')}, home_team={row.get('home_team')}, away_team={row.get('away_team')}, logo={logo}")
 
-        events_map[event_id]["bookmakers"][sportsbook_key]["markets"][market]["outcomes"].append({
+        events_map[event_key]["bookmakers"][sportsbook_key]["markets"][market]["outcomes"].append({
             "name": selection,
             "price": row.get("odds_american"),
             "logo": logo
