@@ -10,8 +10,6 @@ export default function StockSearch({ userEmail }) {
 
   const LOGOKIT_TOKEN = import.meta.env.VITE_LOGOKIT_API_TOKEN;
   const FMP_KEY = import.meta.env.VITE_FMP_API_KEY;
-  console.log("LOGOKIT token:", LOGOKIT_TOKEN); // ← add here
-
 
   const [ticker, setTicker] = useState("");
   const [stock, setStock] = useState(null);
@@ -191,12 +189,7 @@ async function selectSuggestion(symbol, name) {
                 className="dropdown-item"
                 onMouseDown={() => selectSuggestion(s.symbol, s.name)}
               >
-                <img
-                  src={`https://img.logokit.com/ticker/${s.symbol}?token=${LOGOKIT_TOKEN}`}
-                  alt={s.symbol}
-                  className="dropdown-logo"
-                  onError={(e) => { e.target.style.display = "none"; }}
-                />
+            
                 <span className="dropdown-ticker">{s.symbol}</span>
                 <span className="dropdown-name">{s.name}</span>
               </button>
