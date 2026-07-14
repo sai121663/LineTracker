@@ -21,7 +21,10 @@ sports_cache = {}
 CACHE_TTL = 150  # cache results for 5 minutes
 
 # --- Database config ---
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///lineminder.db"
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
+    "DATABASE_URL",
+    "sqlite:///lineminder.db"
+)
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db.init_app(app)
