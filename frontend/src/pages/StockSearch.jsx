@@ -10,6 +10,8 @@ export default function StockSearch({ userEmail }) {
 
   const LOGOKIT_TOKEN = import.meta.env.VITE_LOGOKIT_API_TOKEN;
   const FMP_KEY = import.meta.env.VITE_FMP_API_KEY;
+  console.log("LOGOKIT token:", LOGOKIT_TOKEN); // ← add here
+
 
   const [ticker, setTicker] = useState("");
   const [stock, setStock] = useState(null);
