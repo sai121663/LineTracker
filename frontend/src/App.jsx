@@ -36,52 +36,52 @@ function App() {
       />
     )}
       
-      <div className="app-shell">
-        <header className="app-header">
-          <div className="app-header-inner">
-            <Link to="/" className="logo-link">
-              LINE<span className="logo-accent">TRACKER</span>
-            </Link>
+      {userEmail && !showEmailGate && (
+        <div className="app-shell">
+          <header className="app-header">
+            <div className="app-header-inner">
+              <Link to="/" className="logo-link">
+                LINE<span className="logo-accent">TRACKER</span>
+              </Link>
 
-            <nav className="main-nav">
-              <NavLink
-                to="/stocks"
-                className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
-              >
-                Stocks 🌱
-              </NavLink>
-              <NavLink
-                to="/bets"
-                className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
-              >
-                Bets 🎟️
-
-             </NavLink>
-              {userEmail && (
-                <button
-                  className="nav-link"
-                  onClick={() => setShowEmailGate(true)}
-                  style={{ cursor: "pointer", border: "none", background: "transparent" }}
+              <nav className="main-nav">
+                <NavLink
+                  to="/stocks"
+                  className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
                 >
-                  {userEmail} ✕
-                </button>
-              )}
+                  Stocks 🌱
+                </NavLink>
+                <NavLink
+                  to="/bets"
+                  className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
+                >
+                  Bets 🎟️
+                </NavLink>
+                {userEmail && (
+                  <button
+                    className="nav-link"
+                    onClick={() => setShowEmailGate(true)}
+                    style={{ cursor: "pointer", border: "none", background: "transparent" }}
+                  >
+                    {userEmail} ✕
+                  </button>
+                )}
+              </nav>
+            </div>
+          </header>
 
-            </nav>
-
-          </div>
-        </header>
-
-        <main className="app-main">
-          {emailLoaded && (
-            <Routes>
-              <Route path="/" element={<Dashboard userEmail={userEmail} />} />
-              <Route path="/stocks" element={<StockSearch userEmail={userEmail} />} />
-              <Route path="/bets" element={<BetSearch userEmail={userEmail} />} />
-            </Routes>
-          )}
-        </main>
-      </div>
+          <main className="app-main">
+            {emailLoaded && (
+              <Routes>
+                <Route path="/" element={<Dashboard userEmail={userEmail} />} />
+                <Route path="/stocks" element={<StockSearch userEmail={userEmail} />} />
+                <Route path="/bets" element={<BetSearch userEmail={userEmail} />} />
+              </Routes>
+            )}
+          </main>
+        </div>
+      )}
+      
     </BrowserRouter>
   );
 }
