@@ -99,7 +99,7 @@ def build_email_content(alert):
         opponent_logo_html = f'<img src="{opponent_logo}" width="16" height="16" style="border-radius:50%;vertical-align:middle;margin-right:4px;" />' if opponent_logo else ""  # ← add
         current_display = f"+{int(alert.current_value)}" if alert.current_value and alert.current_value > 0 else str(int(alert.current_value)) if alert.current_value else "—"
         target_display = f"+{int(alert.target_value)}" if alert.target_value > 0 else str(int(alert.target_value))
-        subject = f"LineTracker: {alert.outcome_name} odds hit your target"
+        subject = f"{alert.outcome_name} odds hit your target"
         body = f"""
 
         <div style="max-width:520px;margin:0 auto;background:white;border-radius:12px;overflow:hidden;font-family:sans-serif;">
