@@ -36,7 +36,7 @@ def build_email_content(alert):
     if alert.alert_type == "Stock 🌱":
         LOGOKIT_TOKEN = os.environ.get("LOGOKIT_TOKEN", "")
         logo_url = f"https://img.logokit.com/ticker/{alert.ticker}?token={LOGOKIT_TOKEN}"
-        subject = f"LineTracker: {alert.ticker} hit your target"
+        subject = f"{alert.ticker} hit your target"
         body = f"""
         <div style="max-width:520px;margin:0 auto;background:white;border-radius:12px;overflow:hidden;font-family:sans-serif;">
           {header}
