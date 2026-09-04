@@ -143,10 +143,12 @@ export default function Dashboard({ userEmail }) {
                 <div className="alert-card-main">
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
                     <div className="alert-card-type">{alert.alert_type}</div>
-                    <span className="live-badge">
-                      <span className="live-dot" />
-                      {formatLiveValue(alert)}
-                    </span>
+                    {alert.alert_type === "Stock 🌱" && (
+                      <span className="live-badge">
+                        <span className="live-dot" />
+                        {formatLiveValue(alert)}
+                      </span>
+                    )}
                   </div>
                   <p className="alert-card-title">{alertTitle(alert)}</p>
                   <p className="alert-card-subtitle">{alertSubtitle(alert)}</p>
