@@ -146,12 +146,21 @@ def poll_alerts(app, db, Alert, sharp_api_key, send_email_func=None):
             hit = check_threshold(current_value, alert.target_value, alert.direction)
 
             if hit:
-                alert.triggered = True
-                alert.triggered_at = datetime.utcnow()
                 print(f"[poll] Alert {alert.id} TRIGGERED — {current_value} {alert.ticker} {alert.direction} {alert.target_value}")
 
+                # Only mark the alert triggered (which removes it from the
+                # dashboard) once the email has actually gone out. If the send
+                # fails, leave it active — it'll retry on the next poll cycle
+                # instead of silently vanishing with no notification sent.
+                email_sent = True
                 if send_email_func:
-                    send_email_func(alert)
+                    email_sent = send_email_func(alert)
+                    if not email_sent:
+                        print(f"[poll] Alert {alert.id} email failed to send — leaving alert active to retry next cycle")
+
+                if email_sent:
+                    alert.triggered = True
+                    alert.triggered_at = datetime.utcnow()
             else:
                 print(f"[poll] Alert {alert.id} not yet hit — current: {current_value}, target: {alert.target_value}")
 

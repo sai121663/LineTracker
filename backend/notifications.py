@@ -148,19 +148,25 @@ def send_alert_email(alert):
         sib_api_v3_sdk.ApiClient(configuration)
     )
 
-    subject, html_content = build_email_content(alert)
-
-    send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
-        sender={"name": SENDER_NAME, "email": SENDER_EMAIL},
-        to=[{"email": alert.user_email}],
-        subject=subject,
-        html_content=html_content,
-    )
-
     try:
+        subject, html_content = build_email_content(alert)
+
+        send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
+            sender={"name": SENDER_NAME, "email": SENDER_EMAIL},
+            to=[{"email": alert.user_email}],
+            subject=subject,
+            html_content=html_content,
+        )
+
         api_instance.send_transac_email(send_smtp_email)
         print(f"[email] Sent alert email for alert {alert.id} to {alert.user_email}")
         return True
     except ApiException as e:
         print(f"[email] Failed to send email for alert {alert.id}: {e}")
+        return False
+    except Exception as e:
+        # Catches bugs in build_email_content (e.g. a missing/None value in the
+        # template) so a bad alert can't silently kill the whole poll cycle —
+        # it's treated the same as a failed send and gets retried next poll.
+        print(f"[email] Unexpected error building/sending email for alert {alert.id}: {e}")
         return False
