@@ -17,6 +17,15 @@ function formatValue(alert) {
   return formatOdds(alert.current_value);
 }
 
+function formatLiveValue(alert) {
+  if (alert.alert_type === "Stock 🌱") {
+    return alert.live_value !== null && alert.live_value !== undefined
+      ? `$${parseFloat(alert.live_value).toFixed(2)}`
+      : "—";
+  }
+  return formatOdds(alert.live_value);
+}
+
 function formatTarget(alert) {
   if (alert.alert_type === "Stock 🌱") return `$${parseFloat(alert.target_value).toFixed(2)}`;
   return formatOdds(alert.target_value);
@@ -134,6 +143,10 @@ export default function Dashboard({ userEmail }) {
                 <div className="alert-card-main">
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
                     <div className="alert-card-type">{alert.alert_type}</div>
+                    <span className="live-badge">
+                      <span className="live-dot" />
+                      {formatLiveValue(alert)}
+                    </span>
                   </div>
                   <p className="alert-card-title">{alertTitle(alert)}</p>
                   <p className="alert-card-subtitle">{alertSubtitle(alert)}</p>
@@ -158,7 +171,7 @@ export default function Dashboard({ userEmail }) {
 
                 <div className="alert-card-values">
                   <div className="pill-group">
-                    <span className="pill-label">Now</span>
+                    <span className="pill-label">Set at</span>
                     <span className="pill neutral">{formatValue(alert)}</span>
                   </div>
                   <span className={`arrow ${alert.direction === "above" ? "arrow-success" : "arrow-danger"}`}>→</span>

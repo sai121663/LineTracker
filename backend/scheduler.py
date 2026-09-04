@@ -132,7 +132,7 @@ def poll_alerts(app, db, Alert, sharp_api_key, send_email_func=None):
                 print(f"[poll] Could not fetch current value for alert {alert.id}, skipping")
                 continue
 
-            alert.current_value = current_value
+            alert.live_value = current_value
 
             # Deleting alerts for old games
             if alert.alert_type == "bet" and alert.commence_time:

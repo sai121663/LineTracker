@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from flask_apscheduler import APScheduler
+from sqlalchemy import inspect, text
 from notifications import send_alert_email
 
 from models import db, Alert
@@ -31,6 +32,23 @@ db.init_app(app)
 
 with app.app_context():
     db.create_all()
+
+    # db.create_all() only creates tables that don't exist yet — it won't add
+    # new columns to a table that's already there (e.g. on the Render Postgres
+    # database). This adds any columns the models define but the live table
+    # is missing, so existing deployments pick up schema changes like
+    # Alert.live_value without a manual migration step.
+    inspector = inspect(db.engine)
+    existing_columns = {col["name"] for col in inspector.get_columns("alerts")}
+    model_columns = {col.name: col for col in Alert.__table__.columns}
+    missing = model_columns.keys() - existing_columns
+    if missing:
+        with db.engine.connect() as conn:
+            for name in missing:
+                col_type = model_columns[name].type.compile(dialect=db.engine.dialect)
+                conn.execute(text(f"ALTER TABLE alerts ADD COLUMN {name} {col_type}"))
+            conn.commit()
+        print(f"[migrate] Added missing alerts column(s): {', '.join(sorted(missing))}")
 
 # --- Config ---
 SHARP_API_KEY = os.environ.get("SHARP_API_KEY", "")
