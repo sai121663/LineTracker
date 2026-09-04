@@ -1,4 +1,13 @@
 import os
+import sys
+
+# Render (and most hosting platforms) capture stdout in a way that fully
+# buffers print() instead of flushing it line-by-line, so log lines can sit
+# in memory for a long time before showing up in the dashboard — making it
+# look like nothing happened when it actually did. Force every print() to
+# flush immediately so log timestamps are trustworthy.
+sys.stdout.reconfigure(line_buffering=True)
+
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import yfinance as yf
