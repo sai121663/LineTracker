@@ -221,6 +221,13 @@ export default function BetSearch({ userEmail }) {
       const mkt = (bm.markets || []).find((m) => m.key === market.key);
       if (mkt) {
         for (const o of mkt.outcomes) {
+          // NHL games always have a final winner (overtime/shootout
+          // decides it), so a "Tie" moneyline outcome isn't a real
+          // bettable result for this sport — filter it out instead of
+          // showing an option nobody can actually win.
+          if (sport?.key === "icehockey_nhl" && (o.name || "").trim().toLowerCase() === "tie") {
+            continue;
+          }
           results.push({
             name: o.name,
             point: o.point,
