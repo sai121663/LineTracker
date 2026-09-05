@@ -160,6 +160,17 @@
   margin-top: 2px;
 }
 
+.subtitle-team-logo {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  object-fit: contain;
+  vertical-align: middle;
+  margin-right: 4px;
+  position: relative;
+  top: -1px;
+}
+
 .alert-card-values {
   display: flex;
   align-items: center;

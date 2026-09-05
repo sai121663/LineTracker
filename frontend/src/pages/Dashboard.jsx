@@ -59,7 +59,21 @@ function alertSubtitle(alert) {
   if (alert.alert_type === "Stock 🌱") return alert.company_name;
   if (!alert.home_team || !alert.away_team) return "Bet";
   const opponent = alert.outcome_name === alert.home_team ? alert.away_team : alert.home_team;
-  return `vs ${opponent}`;
+  const opponentLogo = alert.outcome_name === alert.home_team ? alert.away_logo : alert.home_logo;
+  return (
+    <>
+      vs{" "}
+      {opponentLogo && (
+        <img
+          src={opponentLogo}
+          alt={opponent}
+          className="subtitle-team-logo"
+          onError={(e) => { e.target.style.display = "none"; }}
+        />
+      )}
+      {opponent}
+    </>
+  );
 }
 
 export default function Dashboard({ userEmail }) {
