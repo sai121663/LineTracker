@@ -111,7 +111,7 @@ def build_email_content(alert):
 
         LOGOKIT_TOKEN = os.environ.get("LOGOKIT_TOKEN", "")  
 
-        bookmaker_logo_html = f'<img src="https://img.logokit.com/domain/{bookmaker_domain}?token={LOGOKIT_TOKEN}" width="16" height="16" style="border-radius:3px;vertical-align:middle;margin-right:4px;" />' if bookmaker_domain else ""  # ← add
+        bookmaker_logo_html = f'<img src="https://img.logokit.com/{bookmaker_domain}?token={LOGOKIT_TOKEN}" width="16" height="16" style="border-radius:3px;vertical-align:middle;margin-right:4px;" />' if bookmaker_domain else ""  # ← add
         opponent_logo_html = f'<img src="{opponent_logo}" width="16" height="16" style="border-radius:50%;vertical-align:middle;margin-right:4px;" />' if opponent_logo else ""  # ← add
         current_display = f"+{int(alert.current_value)}" if alert.current_value and alert.current_value > 0 else str(int(alert.current_value)) if alert.current_value else "—"
         target_display = f"+{int(alert.target_value)}" if alert.target_value > 0 else str(int(alert.target_value))
