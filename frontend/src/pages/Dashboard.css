@@ -166,6 +166,7 @@
   border-radius: 50%;
   object-fit: contain;
   vertical-align: middle;
+  margin-left: 6px;
   margin-right: 4px;
   position: relative;
   top: -1px;
