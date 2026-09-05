@@ -62,6 +62,13 @@ def build_email_content(alert):
     if alert.alert_type == "Stock 🌱":
         LOGOKIT_TOKEN = os.environ.get("LOGOKIT_TOKEN", "")
         logo_url = f"https://img.logokit.com/ticker/{alert.ticker}?token={LOGOKIT_TOKEN}"
+        # Show what the price ACTUALLY was the moment this triggered, not
+        # just the target re-displayed — a single poll cycle can jump
+        # right past the target (a stock can gap on big news), and
+        # quietly showing the target instead hides that overshoot.
+        live_display = (
+            f"{alert.live_value:.2f}" if alert.live_value is not None else f"{alert.target_value:.2f}"
+        )
         subject = f"{alert.ticker} hit your target"
         body = f"""
         <div style="max-width:520px;margin:0 auto;background:white;border-radius:12px;overflow:hidden;font-family:sans-serif;">
@@ -90,7 +97,8 @@ def build_email_content(alert):
 
             <div style="flex:1;background:#f0fdf8;border:1px solid #3DDC97;border-radius:8px;padding:14px 16px;text-align:center;">
               <p style="font-size:11px;color:#3DDC97;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 4px;">Now</p>
-              <p style="font-family:monospace;font-size:22px;font-weight:600;color:#3DDC97;margin:0;"> ${alert.target_value:.2f}</p>
+              <p style="font-family:monospace;font-size:22px;font-weight:600;color:#3DDC97;margin:0;">${live_display}</p>
+              <p style="font-size:10px;color:#3DDC97;opacity:0.75;margin:4px 0 0;">target was ${alert.target_value:.2f}</p>
             </div>
           </div>
           {footer}
@@ -115,6 +123,15 @@ def build_email_content(alert):
         opponent_logo_html = f'<img src="{opponent_logo}" width="16" height="16" style="border-radius:50%;vertical-align:middle;margin-right:4px;" />' if opponent_logo else ""  # ← add
         current_display = f"+{int(alert.current_value)}" if alert.current_value and alert.current_value > 0 else str(int(alert.current_value)) if alert.current_value else "—"
         target_display = f"+{int(alert.target_value)}" if alert.target_value > 0 else str(int(alert.target_value))
+        # Same as the stock branch: show the odds as they ACTUALLY were
+        # the moment this triggered, not the target re-displayed. Odds
+        # can swing hundreds of points in a single poll cycle (one big
+        # play), so showing the target instead of live_value hides how
+        # far the line really moved.
+        if alert.live_value is not None:
+            live_display = f"+{int(alert.live_value)}" if alert.live_value > 0 else str(int(alert.live_value))
+        else:
+            live_display = target_display
         subject = f"{alert.outcome_name} odds hit your target"
         body = f"""
 
@@ -142,7 +159,8 @@ def build_email_content(alert):
 
             <div style="flex:1;background:#f0fdf8;border:1px solid #3DDC97;border-radius:8px;padding:14px 16px;text-align:center;">
                 <p style="font-size:11px;color:#3DDC97;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 4px;">Now</p>
-                <p style="font-family:monospace;font-size:22px;font-weight:600;color:#3DDC97;margin:0;">{target_display}</p>
+                <p style="font-family:monospace;font-size:22px;font-weight:600;color:#3DDC97;margin:0;">{live_display}</p>
+                <p style="font-size:10px;color:#3DDC97;opacity:0.75;margin:4px 0 0;">target was {target_display}</p>
             </div>
         </div>
         <p style="font-size:13px;color:#8B92A0;margin:16px 32px 0;text-align:left;">on {bookmaker_logo_html}<span style="color:#0B0E11;font-weight:600;">{alert.bookmaker}</span></p>
