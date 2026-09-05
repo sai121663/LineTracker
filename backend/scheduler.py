@@ -25,6 +25,26 @@ MARKET_TO_SHARP = {
     "totals": "total",
 }
 
+def _outcome_matches(selection, outcome_name):
+    """True if SharpAPI's raw 'selection' field refers to the same team/
+    selection as the alert's stored outcome_name, even if one is
+    abbreviated and the other is the full name (e.g. "Pistons" vs
+    "Detroit Pistons"). app.py's /odds route already expands abbreviated
+    selections to full team names before a user picks one and it gets
+    saved as outcome_name — but SharpAPI's raw odds feed (what polling
+    reads here) isn't guaranteed to use the full name on every row, so an
+    exact string match would silently and permanently never fire."""
+    sel = (selection or "").strip().casefold()
+    name = (outcome_name or "").strip().casefold()
+    if not sel or not name:
+        return False
+    if sel == name:
+        return True
+    sel_last_word = sel.split()[-1] if sel.split() else sel
+    name_last_word = name.split()[-1] if name.split() else name
+    return name.endswith(sel_last_word) or sel.endswith(name_last_word)
+
+
 def get_bet_odds(sharp_api_key, sport, event_id, market, outcome_name, bookmaker):
     """Fetch current odds for a specific outcome from SharpAPI."""
     league = SPORT_TO_SHARP.get(sport)
@@ -74,7 +94,7 @@ def get_bet_odds(sharp_api_key, sport, event_id, market, outcome_name, bookmaker
                 if sportsbook_label.strip().casefold() != (bookmaker or "").strip().casefold():
                     continue
                 found_bookmaker = True
-                if (row.get("selection") or "").strip().casefold() == (outcome_name or "").strip().casefold():
+                if _outcome_matches(row.get("selection"), outcome_name):
                     return row.get("odds_american")
 
             pagination = data.get("pagination", {})
