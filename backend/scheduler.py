@@ -67,10 +67,14 @@ def get_bet_odds(sharp_api_key, sport, event_id, market, outcome_name, bookmaker
                     continue
                 found_event = True
                 sportsbook_label = (row.get("sportsbook_ref") or {}).get("label") or row.get("sportsbook", "").title()
-                if sportsbook_label != bookmaker:
+                # Case/whitespace-insensitive: the event-search endpoint and this
+                # odds endpoint can format the same sportsbook/team differently
+                # (e.g. "Draftkings" vs "DraftKings"), which an exact string
+                # match would treat as a permanent, silent non-match.
+                if sportsbook_label.strip().casefold() != (bookmaker or "").strip().casefold():
                     continue
                 found_bookmaker = True
-                if row.get("selection") == outcome_name:
+                if (row.get("selection") or "").strip().casefold() == (outcome_name or "").strip().casefold():
                     return row.get("odds_american")
 
             pagination = data.get("pagination", {})
@@ -133,6 +137,21 @@ def poll_alerts(app, db, Alert, sharp_api_key, send_email_func=None):
         print(f"[poll] Checking {len(alerts)} active alert(s) at {datetime.utcnow().isoformat()}")
 
         for alert in alerts:
+            # Delete bet alerts for games that started 5+ hours ago *before*
+            # attempting a fetch. This used to run after the fetch (and used
+            # a lowercase "bet" that never matched the real "Bet 🎟️" value,
+            # so it never ran at all) — an alert whose odds can never be
+            # fetched (the actual stuck case) hit "continue" on the fetch
+            # failure below and never reached it, so it stayed active
+            # forever, failing every single poll with no way out.
+            if alert.alert_type == "Bet 🎟️" and alert.commence_time:
+                commence = datetime.fromisoformat(alert.commence_time.replace("Z", "+00:00"))
+                hours_since_start = (datetime.now(timezone.utc) - commence).total_seconds() / 3600
+                if hours_since_start > 5:
+                    print(f"[poll] Alert {alert.id} game likely over, deleting")
+                    db.session.delete(alert)
+                    continue
+
             current_value = None
 
             if alert.alert_type == "Stock 🌱":
@@ -154,15 +173,6 @@ def poll_alerts(app, db, Alert, sharp_api_key, send_email_func=None):
                 continue
 
             alert.live_value = current_value
-
-            # Deleting alerts for old games
-            if alert.alert_type == "bet" and alert.commence_time:
-                    commence = datetime.fromisoformat(alert.commence_time.replace("Z", "+00:00"))
-                    hours_since_start = (datetime.now(timezone.utc) - commence).total_seconds() / 3600
-                    if hours_since_start > 5:
-                        print(f"[poll] Alert {alert.id} game likely over, deleting")
-                        db.session.delete(alert)
-                        continue
 
             hit = check_threshold(current_value, alert.target_value, alert.direction)
 
