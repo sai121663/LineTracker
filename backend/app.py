@@ -356,6 +356,10 @@ def create_alert():
         bookmaker=data.get("bookmaker"),
         target_value=data["target_value"],
         current_value=data.get("current_value"),
+        # Seed live_value with the same starting price so the dashboard's
+        # live badge shows something immediately instead of "—" while it
+        # waits for the first poll cycle (up to 60s later) to update it.
+        live_value=data.get("current_value"),
         direction=data["direction"],
         user_email=data["user_email"],
         commence_time=data.get("commence_time")
