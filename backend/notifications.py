@@ -7,6 +7,25 @@ SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "your_verified_sender@example.com"
 SENDER_NAME = "LineTracker"
 LOGOKIT_TOKEN = os.environ.get("LOGOKIT_TOKEN", "")
 
+BOOKMAKER_LOGO_DOMAINS = {
+    "draftkings": "draftkings.com",
+    "fanduel": "fanduelracing.com",
+    "betmgm": "betmgm.com",
+    "betrivers": "betrivers.com",
+    "bovada": "bovada.lv",
+    "mybookie.ag": "mybookie.ag",
+    "betonline.ag": "betonline.ag",
+    "lowvig.ag": "lowvig.ag",
+    "betus": "betus.com.pa",
+    "caesars": "caesars.com",
+    "pointsbet": "pointsbet.com",
+    "unibet": "unibet.com",
+    "bet365": "bet365.com",
+    "william hill": "williamhill.com",
+    "betway": "betway.com",
+    "hard rock bet": "hardrock.com",
+}
+
 
 def format_odds(price):
     if price is None: 
@@ -81,17 +100,7 @@ def build_email_content(alert):
         direction_symbol = "≥" if alert.direction == "above" else "≤"
         opponent = alert.home_team if alert.outcome_name == alert.away_team else alert.away_team
         opponent_logo = alert.home_logo if alert.outcome_name == alert.away_team else alert.away_logo  # ← add
-        bookmaker_domain = {
-            "DraftKings": "draftkings.com",
-            "FanDuel": "fanduelracing.com",
-            "BetMGM": "betmgm.com",
-            "BetRivers": "betrivers.com",
-            "Bovada": "bovada.lv",
-            "MyBookie.ag": "mybookie.ag",
-            "BetOnline.ag": "betonline.ag",
-            "LowVig.ag": "lowvig.ag",
-            "BetUS": "betus.com.pa",
-        }.get(alert.bookmaker, "")  
+        bookmaker_domain = BOOKMAKER_LOGO_DOMAINS.get((alert.bookmaker or "").strip().casefold(), "")
 
         LOGOKIT_TOKEN = os.environ.get("LOGOKIT_TOKEN", "")  
 
@@ -110,7 +119,7 @@ def build_email_content(alert):
             <div>
                 <p style="font-size:22px;font-weight:700;color:#0B0E11;margin:0 0 4px;">{alert.outcome_name}</p>
                 <p style="font-size:14px;color:#8B92A0;margin:0;">vs {opponent_logo_html}<span style="color:#0B0E11;font-weight:600;">{opponent}</span></p>
-                <p style="font-size:13px;color:#8B92A0;margin:6px 0 0;">on {bookmaker_logo_html}<span style="color:#0B0E11;font-weight:600;">{alert.bookmaker}</span></p>            </div>
+            </div>
             </div>
         </div>
         <div style="margin:24px 32px;border-top:1px solid #eee;"></div>
@@ -129,6 +138,7 @@ def build_email_content(alert):
                 <p style="font-family:monospace;font-size:22px;font-weight:600;color:#3DDC97;margin:0;">{target_display}</p>
             </div>
         </div>
+        <p style="font-size:13px;color:#8B92A0;margin:16px 32px 0;text-align:center;">on {bookmaker_logo_html}<span style="color:#0B0E11;font-weight:600;">{alert.bookmaker}</span></p>
         {footer}
         </div>
         """
