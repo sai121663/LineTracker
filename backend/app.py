@@ -196,8 +196,14 @@ def get_odds():
         if not event_id:
             continue
 
-        event_date = (row.get("event_start_time") or "")[:10]
-        event_key = f"{row.get('home_team')}_{row.get('away_team')}_{event_date}"
+        # Group by SharpAPI's own event_id, not a team-name/date string — two
+        # different bookmakers can format home_team/away_team slightly
+        # differently for the exact same game (abbreviation vs full name,
+        # different casing, etc.), which was splitting one real game into
+        # two duplicate cards. event_id is the canonical identifier and is
+        # already what every other part of this app (scheduler.py) uses to
+        # match odds back to a specific game.
+        event_key = event_id
 
         if event_key not in events_map:
             home_name = (row.get("home") or {}).get("name") or row.get("home_team", "")
