@@ -3,6 +3,25 @@ import { Link } from "react-router-dom";
 import { getAlerts, deleteAlert } from "../api";
 import "./Dashboard.css";
 
+const BOOKMAKER_DOMAINS = {
+  "Draftkings": "draftkings.com",
+  "FanDuel": "fanduelracing.com",
+  "BetMGM": "betmgm.com",
+  "BetRivers": "betrivers.com",
+  "Bovada": "bovada.lv",
+  "MyBookie.ag": "mybookie.ag",
+  "BetOnline.ag": "betonline.ag",
+  "LowVig.ag": "lowvig.ag",
+  "BetUS": "betus.com.pa",
+  "Caesars": "caesars.com",
+  "PointsBet": "pointsbet.com",
+  "Unibet": "unibet.com",
+  "bet365": "bet365.com",
+  "William Hill": "williamhill.com",
+  "Betway": "betway.com",
+  "Hard Rock Bet": "hardrock.com",
+};
+
 function formatOdds(price) {
   if (price === null || price === undefined) return "—";
   return price > 0 ? `+${price}` : `${price}`;
@@ -40,7 +59,7 @@ function alertSubtitle(alert) {
   if (alert.alert_type === "Stock 🌱") return alert.company_name;
   if (!alert.home_team || !alert.away_team) return "Bet";
   const opponent = alert.outcome_name === alert.home_team ? alert.away_team : alert.home_team;
-  return alert.bookmaker ? `vs ${opponent} · ${alert.bookmaker}` : `vs ${opponent}`;
+  return `vs ${opponent}`;
 }
 
 export default function Dashboard({ userEmail }) {
@@ -147,6 +166,19 @@ export default function Dashboard({ userEmail }) {
                       <span className="live-badge">
                         <span className="live-dot" />
                         {formatLiveValue(alert)}
+                      </span>
+                    )}
+                    {alert.alert_type !== "Stock 🌱" && alert.bookmaker && (
+                      <span className="bookmaker-badge">
+                        {BOOKMAKER_DOMAINS[alert.bookmaker] && (
+                          <img
+                            src={`https://img.logokit.com/${BOOKMAKER_DOMAINS[alert.bookmaker]}?token=${LOGOKIT_TOKEN}`}
+                            alt={alert.bookmaker}
+                            className="bookmaker-badge-logo"
+                            onError={(e) => { e.target.style.display = "none"; }}
+                          />
+                        )}
+                        {alert.bookmaker}
                       </span>
                     )}
                   </div>
