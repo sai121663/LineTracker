@@ -179,19 +179,25 @@ def poll_alerts(app, db, Alert, sharp_api_key, send_email_func=None):
             if hit:
                 print(f"[poll] Alert {alert.id} TRIGGERED — {current_value} {alert.ticker} {alert.direction} {alert.target_value}")
 
-                # Only mark the alert triggered (which removes it from the
-                # dashboard) once the email has actually gone out. If the send
-                # fails, leave it active — it'll retry on the next poll cycle
-                # instead of silently vanishing with no notification sent.
+                # Stamp the trigger time BEFORE sending so the email itself
+                # (built inside send_email_func, which reads alert.triggered_at)
+                # actually has a timestamp to show instead of blank/"—". Only
+                # kept — and only marked triggered, which removes it from the
+                # dashboard — once the email has actually gone out. If the
+                # send fails, roll the timestamp back and leave the alert
+                # active so it retries on the next poll cycle instead of
+                # silently vanishing with no notification sent.
+                alert.triggered_at = datetime.utcnow()
+
                 email_sent = True
                 if send_email_func:
                     email_sent = send_email_func(alert)
                     if not email_sent:
                         print(f"[poll] Alert {alert.id} email failed to send — leaving alert active to retry next cycle")
+                        alert.triggered_at = None
 
                 if email_sent:
                     alert.triggered = True
-                    alert.triggered_at = datetime.utcnow()
             else:
                 print(f"[poll] Alert {alert.id} not yet hit — current: {current_value}, target: {alert.target_value}")
 

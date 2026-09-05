@@ -37,7 +37,14 @@ def format_odds(price):
         return str(price)
 
 def build_email_content(alert):
-    triggered_at = alert.triggered_at.strftime("%B %d, %Y at %I:%M %p") if alert.triggered_at else "—"
+    if alert.triggered_at:
+        date_part = alert.triggered_at.strftime("%b %-d")
+        time_part = alert.triggered_at.strftime("%I:%M %p").lstrip("0")
+        period = "A.M." if time_part.endswith("AM") else "P.M."
+        time_part = time_part[:-2] + period
+        triggered_at = f"{date_part} @ {time_part}"
+    else:
+        triggered_at = "—"
 
     header = """
     <div style="background:#0B0E11;padding:24px 32px;">
@@ -48,7 +55,7 @@ def build_email_content(alert):
 
     footer = f"""
     <div style="margin:24px 32px 28px;padding-top:20px;border-top:1px solid #eee;">
-      <span style="font-size:11px;color:#aaa;">Triggered on {triggered_at}</span>
+      <span style="font-size:11px;color:#aaa;font-style:italic;">Triggered on {triggered_at}</span>
     </div>
     """
 
