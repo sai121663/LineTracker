@@ -38,6 +38,14 @@ def get_bet_odds(sharp_api_key, sport, event_id, market, outcome_name, bookmaker
     offset = 0
     limit = 50
 
+    # Tracked so a "not found" result can say exactly where the lookup broke
+    # down instead of a dead-end "could not fetch" — was the event missing
+    # entirely, was it there but under a different bookmaker, or was the
+    # bookmaker right but the outcome name didn't match?
+    found_event = False
+    found_bookmaker = False
+    total_rows_seen = 0
+
     try:
         while True:
             url = f"{SHARP_API_BASE}/odds"
@@ -52,13 +60,16 @@ def get_bet_odds(sharp_api_key, sport, event_id, market, outcome_name, bookmaker
             response.raise_for_status()
             data = response.json()
             rows = data.get("data", [])
+            total_rows_seen += len(rows)
 
             for row in rows:
                 if row.get("event_id") != event_id:
                     continue
+                found_event = True
                 sportsbook_label = (row.get("sportsbook_ref") or {}).get("label") or row.get("sportsbook", "").title()
                 if sportsbook_label != bookmaker:
                     continue
+                found_bookmaker = True
                 if row.get("selection") == outcome_name:
                     return row.get("odds_american")
 
@@ -67,6 +78,16 @@ def get_bet_odds(sharp_api_key, sport, event_id, market, outcome_name, bookmaker
                 break
             offset += limit
 
+        if not found_event:
+            print(f"[poll] SharpAPI has no odds for event_id={event_id!r} in league={league!r} "
+                  f"market={sharp_market!r} ({total_rows_seen} other row(s) checked) — the pre-game line "
+                  f"may be gone (game started/finished) or this event_id no longer matches SharpAPI's listing")
+        elif not found_bookmaker:
+            print(f"[poll] Found event_id={event_id!r} but no row for bookmaker={bookmaker!r} — that "
+                  f"sportsbook may not be listing this game, or its label doesn't match what was stored")
+        else:
+            print(f"[poll] Found event_id={event_id!r} and bookmaker={bookmaker!r} but no row matched "
+                  f"outcome_name={outcome_name!r} — likely a naming/format mismatch")
         return None
 
     except requests.exceptions.RequestException as e:
