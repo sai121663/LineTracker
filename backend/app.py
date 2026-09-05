@@ -23,6 +23,7 @@ from notifications import send_alert_email
 
 from models import db, Alert
 from scheduler import poll_alerts
+from auth import verify_google_token, issue_session_token, require_auth
 
 app = Flask(__name__)
 CORS(app)
@@ -327,16 +328,39 @@ def get_odds():
     return jsonify(result)
 
 
+# --- Auth routes ---
+
+@app.route("/auth/google", methods=["POST"])
+def google_login():
+    """Exchange a Google "Sign in with Google" credential for our own
+    LineTracker session token. The frontend sends the raw credential it
+    got from Google; we verify it really came from Google and really is
+    for THIS app, then hand back a token the frontend uses for every
+    request after this."""
+    data = request.get_json() or {}
+    credential = data.get("credential")
+    if not credential:
+        return jsonify({"error": "Missing credential"}), 400
+
+    email = verify_google_token(credential)
+    if not email:
+        return jsonify({"error": "Invalid Google credential"}), 401
+
+    token = issue_session_token(email)
+    return jsonify({"token": token, "email": email})
+
+
 # --- Alert CRUD routes ---
 
 @app.route("/alerts", methods=["POST"])
+@require_auth
 def create_alert():
     data = request.get_json()
 
     if not data:
         return jsonify({"error": "Missing JSON body"}), 400
 
-    required = ["alert_type", "target_value", "direction", "user_email"]
+    required = ["alert_type", "target_value", "direction"]
     missing = [f for f in required if f not in data]
     if missing:
         return jsonify({"error": f"Missing required fields: {', '.join(missing)}"}), 400
@@ -367,7 +391,7 @@ def create_alert():
         # waits for the first poll cycle (up to 60s later) to update it.
         live_value=data.get("current_value"),
         direction=data["direction"],
-        user_email=data["user_email"],
+        user_email=request.user_email,
         commence_time=data.get("commence_time")
     )
 
@@ -378,28 +402,36 @@ def create_alert():
 
 
 @app.route("/alerts", methods=["GET"])
+@require_auth
 def list_alerts():
-    email = request.args.get("email")
-    if email:
-        alerts = Alert.query.filter_by(user_email=email, triggered=False).order_by(Alert.created_at.desc()).all()
-    else:
-        alerts = Alert.query.filter_by(triggered=False).order_by(Alert.created_at.desc()).all()
+    alerts = (
+        Alert.query
+        .filter(db.func.lower(Alert.user_email) == request.user_email, Alert.triggered == False)
+        .order_by(Alert.created_at.desc())
+        .all()
+    )
     return jsonify([a.to_dict() for a in alerts])
 
 
 @app.route("/alerts/<int:alert_id>", methods=["GET"])
+@require_auth
 def get_alert(alert_id):
     alert = Alert.query.get(alert_id)
     if not alert:
         return jsonify({"error": "Alert not found"}), 404
+    if (alert.user_email or "").strip().lower() != request.user_email:
+        return jsonify({"error": "Not your alert"}), 403
     return jsonify(alert.to_dict())
 
 
 @app.route("/alerts/<int:alert_id>", methods=["DELETE"])
+@require_auth
 def delete_alert(alert_id):
     alert = Alert.query.get(alert_id)
     if not alert:
         return jsonify({"error": "Alert not found"}), 404
+    if (alert.user_email or "").strip().lower() != request.user_email:
+        return jsonify({"error": "Not your alert"}), 403
 
     db.session.delete(alert)
     db.session.commit()

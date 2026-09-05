@@ -6,8 +6,6 @@ import "./StockSearch.css";
 export default function StockSearch({ userEmail }) {
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState(userEmail || "");
-
   const LOGOKIT_TOKEN = import.meta.env.VITE_LOGOKIT_API_TOKEN;
   const FMP_KEY = import.meta.env.VITE_FMP_API_KEY;
 
@@ -136,7 +134,6 @@ async function selectSuggestion(symbol, name) {
         target_value: parseFloat(targetValue),
         current_value: stock.price,
         direction,
-        user_email: email,
       });
       navigate("/");
     } catch (err) {

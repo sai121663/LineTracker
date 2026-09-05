@@ -134,7 +134,7 @@ export default function Dashboard({ userEmail }) {
     console.log("loading alerts for email:", userEmail);
     try {
       setLoading(true);
-      const data = await getAlerts(userEmail);
+      const data = await getAlerts();
       setAlerts(data);
       setError(null);
     } catch (err) {

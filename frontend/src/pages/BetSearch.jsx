@@ -70,8 +70,6 @@ export default function BetSearch({ userEmail }) {
 
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState(userEmail || "");
-
   const [step, setStep] = useState(0);
   const [sport, setSport] = useState(null);
   const [events, setEvents] = useState([]);
@@ -206,7 +204,6 @@ export default function BetSearch({ userEmail }) {
         target_value: parseFloat(targetValue),
         current_value: outcome.price,
         direction,
-        user_email: userEmail,
         commence_time: event.commence_time
       });
       navigate("/");
