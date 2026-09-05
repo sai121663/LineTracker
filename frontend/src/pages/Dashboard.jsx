@@ -76,6 +76,52 @@ function alertSubtitle(alert) {
   );
 }
 
+function isSameCalendarDay(a, b) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function alertDateLine(alert) {
+  const createdAt = alert.created_at ? new Date(alert.created_at + "Z") : null;
+  const createdDateStr = createdAt
+    ? createdAt.toLocaleDateString(undefined, { month: "short", day: "numeric" })
+    : null;
+  const createdTimeStr = createdAt
+    ? createdAt.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })
+    : null;
+
+  if (alert.alert_type === "Stock 🌱") {
+    if (!createdAt) return null;
+    return `${createdDateStr}, Created @ ${createdTimeStr}`;
+  }
+
+  // Bet alert
+  if (!alert.commence_time) {
+    return createdAt ? `${createdDateStr}, Created @ ${createdTimeStr}` : null;
+  }
+  if (!createdAt) return null;
+
+  const commenceDate = new Date(alert.commence_time);
+  const now = new Date();
+  const gameStarted = commenceDate <= now;
+
+  if (gameStarted) {
+    return `${createdDateStr}, Created @ ${createdTimeStr}`;
+  }
+
+  const startTimeStr = commenceDate.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+
+  if (isSameCalendarDay(commenceDate, now)) {
+    return `${createdDateStr}, Game starts @ ${startTimeStr}`;
+  }
+
+  const gameDateStr = commenceDate.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return `${createdDateStr}, Game starts @ ${startTimeStr} on ${gameDateStr}`;
+}
+
 export default function Dashboard({ userEmail }) {
 
   const LOGOKIT_TOKEN = import.meta.env.VITE_LOGOKIT_API_TOKEN;
@@ -198,22 +244,8 @@ export default function Dashboard({ userEmail }) {
                   </div>
                   <p className="alert-card-title">{alertTitle(alert)}</p>
                   <p className="alert-card-subtitle">{alertSubtitle(alert)}</p>
-                  {alert.alert_type === "Stock 🌱" ? (
-                    alert.created_at && (
-                      <span className="alert-date">
-                        {new Date(alert.created_at + "Z").toLocaleDateString(undefined, {
-                          month: "short", day: "numeric", hour: "numeric", minute: "2-digit"
-                        })}
-                      </span>
-                    )
-                  ) : (
-                    alert.commence_time && (
-                      <span className="alert-date">
-                        {new Date(alert.commence_time).toLocaleDateString(undefined, {
-                          month: "short", day: "numeric", hour: "numeric", minute: "2-digit"
-                        })}
-                      </span>
-                    )
+                  {alertDateLine(alert) && (
+                    <span className="alert-date">{alertDateLine(alert)}</span>
                   )}
                 </div>
 
