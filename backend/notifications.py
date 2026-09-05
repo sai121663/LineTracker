@@ -1,6 +1,18 @@
 import os
+from datetime import timezone
+from zoneinfo import ZoneInfo
+
 import sib_api_v3_sdk
 from sib_api_v3_sdk.rest import ApiException
+
+# alert.triggered_at is stored as a naive UTC datetime (scheduler.py sets
+# it with datetime.utcnow()). Emails were printing that raw UTC value
+# as-is with no conversion, so "10:30 P.M." in the email was actually
+# 10:30 PM UTC — 4 hours ahead of the real Eastern-time moment (verified:
+# right now Toronto is in EDT, UTC-4). Using the IANA zone name instead of
+# a hardcoded "-4" means this stays correct across the DST switch to EST
+# (UTC-5) in the winter too.
+DISPLAY_TIMEZONE = ZoneInfo("America/Toronto")
 
 BREVO_API_KEY = os.environ.get("BREVO_API_KEY")
 SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "your_verified_sender@example.com")
@@ -38,8 +50,9 @@ def format_odds(price):
 
 def build_email_content(alert):
     if alert.triggered_at:
-        date_part = alert.triggered_at.strftime("%b %-d")
-        time_part = alert.triggered_at.strftime("%I:%M %p").lstrip("0")
+        local_triggered_at = alert.triggered_at.replace(tzinfo=timezone.utc).astimezone(DISPLAY_TIMEZONE)
+        date_part = local_triggered_at.strftime("%b %-d")
+        time_part = local_triggered_at.strftime("%I:%M %p").lstrip("0")
         period = "A.M." if time_part.endswith("AM") else "P.M."
         time_part = time_part[:-2] + period
         triggered_at = f"{date_part} @ {time_part}"
@@ -98,7 +111,7 @@ def build_email_content(alert):
             <div style="flex:1;background:#f0fdf8;border:1px solid #3DDC97;border-radius:8px;padding:14px 16px;text-align:center;">
               <p style="font-size:11px;color:#3DDC97;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 4px;">Now</p>
               <p style="font-family:monospace;font-size:22px;font-weight:600;color:#3DDC97;margin:0;">${live_display}</p>
-              <p style="font-size:10px;color:#3DDC97;opacity:0.75;margin:4px 0 0;">target was ${alert.target_value:.2f}</p>
+              <p style="font-size:10px;color:#3DDC97;opacity:0.75;font-style:italic;margin:4px 0 0;">Target: ${alert.target_value:.2f}</p>
             </div>
           </div>
           {footer}
@@ -160,7 +173,7 @@ def build_email_content(alert):
             <div style="flex:1;background:#f0fdf8;border:1px solid #3DDC97;border-radius:8px;padding:14px 16px;text-align:center;">
                 <p style="font-size:11px;color:#3DDC97;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 4px;">Now</p>
                 <p style="font-family:monospace;font-size:22px;font-weight:600;color:#3DDC97;margin:0;">{live_display}</p>
-                <p style="font-size:10px;color:#3DDC97;opacity:0.75;margin:4px 0 0;">target was {target_display}</p>
+                <p style="font-size:10px;color:#3DDC97;opacity:0.75;font-style:italic;margin:4px 0 0;">Target: {target_display}</p>
             </div>
         </div>
         <p style="font-size:13px;color:#8B92A0;margin:16px 32px 0;text-align:left;">on {bookmaker_logo_html}<span style="color:#0B0E11;font-weight:600;">{alert.bookmaker}</span></p>
