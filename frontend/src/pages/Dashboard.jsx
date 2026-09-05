@@ -115,11 +115,11 @@ function alertDateLine(alert) {
   const startTimeStr = commenceDate.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 
   if (isSameCalendarDay(commenceDate, now)) {
-    return `${createdDateStr}, Game starts @ ${startTimeStr}`;
+    return `${createdDateStr}, Starts @ ${startTimeStr}`;
   }
 
   const gameDateStr = commenceDate.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  return `${createdDateStr}, Game starts @ ${startTimeStr} on ${gameDateStr}`;
+  return `${createdDateStr}, Starts @ ${startTimeStr} on ${gameDateStr}`;
 }
 
 export default function Dashboard({ userEmail }) {
