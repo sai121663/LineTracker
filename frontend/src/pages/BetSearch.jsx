@@ -6,11 +6,11 @@ import "./BetSearch.css";
 const LOGOKIT_TOKEN = import.meta.env.VITE_LOGOKIT_API_TOKEN;
 
 const ALL_SPORTS = [
-  { key: "basketball_nba", label: "NBA 🏀" },
-  { key: "americanfootball_nfl", label: "NFL 🏈" },
-  { key: "icehockey_nhl", label: "NHL 🏒" },
-  { key: "baseball_mlb", label: "MLB ⚾" },
-  { key: "soccer_mls", label: "MLS ⚽" },
+  { key: "basketball_nba", label: "NBA", espnLeague: "nba" },
+  { key: "americanfootball_nfl", label: "NFL", espnLeague: "nfl" },
+  { key: "icehockey_nhl", label: "NHL", espnLeague: "nhl" },
+  { key: "baseball_mlb", label: "MLB", espnLeague: "mlb" },
+  { key: "soccer_mls", label: "MLS", espnLeague: "mls" },
 ];
 
 const MARKETS = [
@@ -266,7 +266,15 @@ export default function BetSearch({ userEmail }) {
           ) : (
             activeSports.map((s) => (
               <button key={s.key} className="option-card" onClick={() => selectSport(s)}>
-                {s.label}
+                <span className="sport-card-label">
+                  <img
+                    src={`https://a.espncdn.com/i/teamlogos/leagues/500/${s.espnLeague}.png`}
+                    alt={s.label}
+                    className="sport-logo"
+                    onError={(e) => { e.target.style.display = "none"; }}
+                  />
+                  {s.label}
+                </span>
                 <span className="event-count">{s.eventCount} games</span>
               </button>
             ))

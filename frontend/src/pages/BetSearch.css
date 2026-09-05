@@ -81,6 +81,20 @@
   background: var(--surface-raised);
 }
 
+.sport-card-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.sport-logo {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
 .option-list {
   display: flex;
   flex-direction: column;
