@@ -40,7 +40,7 @@ function alertSubtitle(alert) {
   if (alert.alert_type === "Stock 🌱") return alert.company_name;
   if (!alert.home_team || !alert.away_team) return "Bet";
   const opponent = alert.outcome_name === alert.home_team ? alert.away_team : alert.home_team;
-  return `vs ${opponent}`;
+  return alert.bookmaker ? `vs ${opponent} · ${alert.bookmaker}` : `vs ${opponent}`;
 }
 
 export default function Dashboard({ userEmail }) {

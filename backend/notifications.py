@@ -109,7 +109,8 @@ def build_email_content(alert):
             {logo_html}
             <div>
                 <p style="font-size:22px;font-weight:700;color:#0B0E11;margin:0 0 4px;">{alert.outcome_name}</p>
-                <p style="font-size:14px;color:#8B92A0;margin:0;">vs {opponent_logo_html}<span style="color:#0B0E11;font-weight:600;">{opponent}</span></p>            </div>
+                <p style="font-size:14px;color:#8B92A0;margin:0;">vs {opponent_logo_html}<span style="color:#0B0E11;font-weight:600;">{opponent}</span></p>
+                <p style="font-size:13px;color:#8B92A0;margin:6px 0 0;">on {bookmaker_logo_html}<span style="color:#0B0E11;font-weight:600;">{alert.bookmaker}</span></p>            </div>
             </div>
         </div>
         <div style="margin:24px 32px;border-top:1px solid #eee;"></div>
