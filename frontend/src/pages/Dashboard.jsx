@@ -119,7 +119,7 @@ function alertDateLine(alert) {
   }
 
   const gameDateStr = commenceDate.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  return `${createdDateStr}, Starts @ ${startTimeStr} on ${gameDateStr}`;
+  return `${createdDateStr}, Scheduled for ${gameDateStr}`;
 }
 
 export default function Dashboard({ userEmail }) {
