@@ -145,7 +145,7 @@ def build_email_content(alert):
                 <p style="font-family:monospace;font-size:22px;font-weight:600;color:#3DDC97;margin:0;">{target_display}</p>
             </div>
         </div>
-        <p style="font-size:13px;color:#8B92A0;margin:16px 32px 0;text-align:center;">on {bookmaker_logo_html}<span style="color:#0B0E11;font-weight:600;">{alert.bookmaker}</span></p>
+        <p style="font-size:13px;color:#8B92A0;margin:16px 32px 0;text-align:left;">on {bookmaker_logo_html}<span style="color:#0B0E11;font-weight:600;">{alert.bookmaker}</span></p>
         {footer}
         </div>
         """
