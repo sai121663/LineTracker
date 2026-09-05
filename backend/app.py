@@ -1,5 +1,6 @@
 import os
 import sys
+from datetime import datetime
 
 # Render (and most hosting platforms) capture stdout in a way that fully
 # buffers print() instead of flushing it line-by-line, so log lines can sit
@@ -127,6 +128,54 @@ def get_stock_price():
 
 
 # --- Odds route ---
+def _team_name_matches(a, b):
+    """Case/whitespace-insensitive, abbreviation-tolerant team name match
+    (same approach as _outcome_matches in scheduler.py) — "New York
+    Rangers" and "NY Rangers" should count as the same team even though
+    they're different strings."""
+    a = (a or "").strip().casefold()
+    b = (b or "").strip().casefold()
+    if not a or not b:
+        return False
+    if a == b:
+        return True
+    a_last = a.split()[-1] if a.split() else a
+    b_last = b.split()[-1] if b.split() else b
+    return a.endswith(b_last) or b.endswith(a_last)
+
+
+def _same_real_game(ev1, ev2):
+    """True if two DIFFERENT event_ids actually refer to the same
+    real-world game. Confirmed case: SharpAPI generated two event_ids for
+    one Bruins @ Rangers game — "nhl_bruins_rangers_..." and
+    "nhl_bruins_nyrangers_..." — because their own ID generation baked in
+    an inconsistent abbreviation for the Rangers. Matching event_id alone
+    can't catch that, since the IDs themselves are genuinely different.
+
+    Two signals together are what make this trustworthy: matching team
+    names AND a start time within an hour of each other. Either signal
+    alone has a plausible failure mode (team names can be formatted
+    differently for the same game; two real games can share a start
+    hour), but two real, distinct games between the same two teams
+    essentially never happen within an hour of each other.
+    """
+    if not _team_name_matches(ev1["home_team"], ev2["home_team"]):
+        return False
+    if not _team_name_matches(ev1["away_team"], ev2["away_team"]):
+        return False
+
+    t1, t2 = ev1.get("commence_time"), ev2.get("commence_time")
+    if not t1 or not t2:
+        return False
+    try:
+        dt1 = datetime.fromisoformat(t1.replace("Z", "+00:00"))
+        dt2 = datetime.fromisoformat(t2.replace("Z", "+00:00"))
+    except (ValueError, AttributeError):
+        return False
+
+    return abs((dt1 - dt2).total_seconds()) <= 3600
+
+
 @app.route("/odds", methods=["GET"])
 def get_odds():
 
@@ -276,6 +325,35 @@ def get_odds():
             "price": row.get("odds_american"),
             "logo": logo
         })
+
+    # Merge near-duplicate events — same real game listed under two
+    # different event_ids (see _same_real_game for why event_id alone
+    # isn't reliable enough to catch this). Merge rather than drop one
+    # outright, so odds/bookmakers attached to either id are kept.
+    event_ids = list(events_map.keys())
+    dropped_ids = set()
+    for i, id1 in enumerate(event_ids):
+        if id1 in dropped_ids:
+            continue
+        for id2 in event_ids[i + 1:]:
+            if id2 in dropped_ids:
+                continue
+            if not _same_real_game(events_map[id1], events_map[id2]):
+                continue
+            print(f"[odds] Merging duplicate event listing: {id2!r} into {id1!r} "
+                  f"({events_map[id1]['home_team']} vs {events_map[id1]['away_team']})")
+            for bm_key, bm_val in events_map[id2]["bookmakers"].items():
+                if bm_key not in events_map[id1]["bookmakers"]:
+                    events_map[id1]["bookmakers"][bm_key] = bm_val
+                    continue
+                for mkt_key, mkt_val in bm_val["markets"].items():
+                    dest_markets = events_map[id1]["bookmakers"][bm_key]["markets"]
+                    if mkt_key not in dest_markets:
+                        dest_markets[mkt_key] = mkt_val
+                    else:
+                        dest_markets[mkt_key]["outcomes"].extend(mkt_val["outcomes"])
+            del events_map[id2]
+            dropped_ids.add(id2)
 
     # After the for loop that builds events_map, add this:
     for event in events_map.values():
