@@ -219,7 +219,7 @@ async function selectSuggestion(symbol, name) {
                 padding: "2px 8px",
                 color: "black"
               }}>
-                Closed at ${stock.previous_close.toFixed(2) ?? "—"}
+                Closed at ${stock.previous_close != null ? stock.previous_close.toFixed(2) : "—"}
               </span>
             </div>
           </div>
