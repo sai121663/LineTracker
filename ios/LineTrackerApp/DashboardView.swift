@@ -175,6 +175,10 @@ private struct AlertCard: View {
                     }
                     .frame(width: 36, height: 36)
                     .clipShape(Circle())
+                    // Nudge down from the top of the card so the logo
+                    // sits beside the ticker/company lines instead of
+                    // the "Stock" type row above them.
+                    .padding(.top, 18)
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
