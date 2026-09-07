@@ -10,9 +10,11 @@ enum Config {
     // This is DIFFERENT from the web VITE_GOOGLE_CLIENT_ID.
     static let googleIOSClientID = "407667179602-dcukha86sncrj0ssn1dp1mckdjg0v4q1.apps.googleusercontent.com"
 
-    // Same publishable Logokit token as frontend/.env's VITE_LOGOKIT_API_TOKEN.
-    // A "pk_" token like this is meant to be embedded in client code — it's
-    // already shipped in plain sight inside the web app's JS bundle, so
-    // there's nothing more exposed about it living here too.
-    static let logokitToken = "pk_fr7b716a88eb2a3b77a6fb"
+    // Logo.dev publishable token, used for the stock-ticker and bookmaker
+    // logos. Logokit (which the web app still uses, in frontend/.env's
+    // VITE_LOGOKIT_API_TOKEN) blocks all non-browser (programmatic)
+    // requests, which breaks image loading in a native app — Logo.dev
+    // doesn't have that restriction, so the iOS app uses it instead.
+    // A "pk_" token like this is meant to be embedded in client code.
+    static let logoDevToken = "pk_Broua1rpRo-c0XB-Grdn1g"
 }

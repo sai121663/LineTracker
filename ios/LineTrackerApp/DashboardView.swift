@@ -147,7 +147,7 @@ private struct AlertCard: View {
     /// ticker's logo (via Logokit) for a stock — same as alert-team-logo.
     private var leadingLogoURL: URL? {
         if isStock, let ticker = alert.ticker {
-            return URL(string: "https://img.logokit.com/ticker/\(ticker)?token=\(Config.logokitToken)")
+            return URL(string: "https://img.logo.dev/ticker/\(ticker)?token=\(Config.logoDevToken)")
         }
         guard let home = alert.homeTeam else { return nil }
         let logo = alert.outcomeName == home ? alert.homeLogo : alert.awayLogo
@@ -350,7 +350,7 @@ private struct BookmakerBadge: View {
 
     var body: some View {
         HStack(spacing: 5) {
-            if let domain, let url = URL(string: "https://img.logokit.com/\(domain)?token=\(Config.logokitToken)") {
+            if let domain, let url = URL(string: "https://img.logo.dev/\(domain)?token=\(Config.logoDevToken)") {
                 RemoteImage(url: url) { image in
                     image.resizable().scaledToFit()
                 } fallback: {
@@ -410,11 +410,7 @@ private struct RemoteImage<Content: View, Fallback: View>: View {
             switch phase {
             case .success(let image):
                 content(image)
-            case .failure(let error):
-                // TEMPORARY: pin down why the leading team/ticker logos
-                // aren't showing up (see conversation) — remove once
-                // that's fixed.
-                let _ = print("[logo] failed to load \(url.absoluteString): \(error)")
+            case .failure:
                 fallback()
             default:
                 Color.clear
