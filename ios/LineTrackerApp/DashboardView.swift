@@ -58,6 +58,7 @@ struct DashboardView: View {
                                 }
                             }
                             .padding(16)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
                 }
@@ -245,6 +246,7 @@ private struct AlertCard: View {
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 16)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.ltSurface)
         .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.ltBorder, lineWidth: 1))
         .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -323,6 +325,7 @@ private struct LiveBadge: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 2)
         .background(Color.ltSuccessDim, in: Capsule())
+        .fixedSize()
     }
 }
 
@@ -355,6 +358,7 @@ private struct BookmakerBadge: View {
         .padding(.vertical, 2)
         .background(Color.ltSurfaceRaised, in: Capsule())
         .overlay(Capsule().stroke(Color.ltBorderBright, lineWidth: 1))
+        .fixedSize()
     }
 
     private var initialBadge: some View {
