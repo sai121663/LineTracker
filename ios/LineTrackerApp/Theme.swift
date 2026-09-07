@@ -17,7 +17,9 @@ extension Color {
     // index.css: --accent: blue; --success: #3DDC97; --danger: #E0585C;
     static let ltAccent = Color.blue
     static let ltSuccess = Color(hex: 0x3DDC97)
+    static let ltSuccessDim = Color(hex: 0x1A3B2E)
     static let ltDanger = Color(hex: 0xE0585C)
+    static let ltDangerDim = Color(hex: 0x3D2226)
 
     init(hex: UInt32) {
         self.init(

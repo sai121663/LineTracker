@@ -60,6 +60,48 @@ enum Formatting {
         return linear >= 100 ? linear + 200 : linear
     }
 
+    /// Port of Dashboard.jsx's alertDateLine(): "Sep 7, Created @ 6:03 PM"
+    /// for a stock (or a bet whose game already started / has no
+    /// commence_time), "Sep 7, Starts @ 7:10 PM" for a bet later today,
+    /// "Sep 7, Scheduled for Sep 9" for one further out.
+    static func alertDateLine(createdAt: String?, commenceTime: String?, isStock: Bool) -> String? {
+        guard let createdAt, let created = parseUTCNaive(createdAt) else { return nil }
+
+        let dateFmt = DateFormatter()
+        dateFmt.setLocalizedDateFormatFromTemplate("MMMd")
+        let timeFmt = DateFormatter()
+        timeFmt.setLocalizedDateFormatFromTemplate("hm")
+
+        let createdLine = "\(dateFmt.string(from: created)), Created @ \(timeFmt.string(from: created))"
+
+        if isStock { return createdLine }
+
+        guard let commenceTime, let commenceDate = parseISO(commenceTime) else { return createdLine }
+
+        if commenceDate <= Date() { return createdLine }
+
+        if Calendar.current.isDate(commenceDate, inSameDayAs: Date()) {
+            return "\(dateFmt.string(from: created)), Starts @ \(timeFmt.string(from: commenceDate))"
+        }
+
+        return "\(dateFmt.string(from: created)), Scheduled for \(dateFmt.string(from: commenceDate))"
+    }
+
+    /// backend/models.py stores created_at as a naive UTC datetime
+    /// (datetime.utcnow().isoformat(), no "Z"/offset) — same as
+    /// Dashboard.jsx appending "Z" itself before parsing.
+    private static func parseUTCNaive(_ iso: String) -> Date? {
+        parseISO(iso + "Z")
+    }
+
+    private static func parseISO(_ iso: String) -> Date? {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = f.date(from: iso) { return date }
+        f.formatOptions = [.withInternetDateTime]
+        return f.date(from: iso)
+    }
+
     static func relativeDate(_ iso: String?) -> String? {
         guard let iso else { return nil }
         let f = ISO8601DateFormatter()
