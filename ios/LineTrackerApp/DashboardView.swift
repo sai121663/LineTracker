@@ -410,7 +410,11 @@ private struct RemoteImage<Content: View, Fallback: View>: View {
             switch phase {
             case .success(let image):
                 content(image)
-            case .failure:
+            case .failure(let error):
+                // TEMPORARY: pin down why the leading team/ticker logos
+                // aren't showing up (see conversation) — remove once
+                // that's fixed.
+                let _ = print("[logo] failed to load \(url.absoluteString): \(error)")
                 fallback()
             default:
                 Color.clear
