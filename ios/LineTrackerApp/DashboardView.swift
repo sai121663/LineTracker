@@ -167,82 +167,94 @@ private struct AlertCard: View {
     }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 16) {
-            if let leadingLogoURL {
-                RemoteImage(url: leadingLogoURL) { image in
-                    image.resizable().scaledToFit()
-                }
-                .frame(width: 36, height: 36)
-                .clipShape(Circle())
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 8) {
-                    Text(alert.alertType)
-                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                        .tracking(0.6)
-                        .foregroundStyle(Color(hex: 0x5EA8FF))
-
-                    if isStock, let live = alert.liveValue {
-                        LiveBadge(text: Formatting.dollars(live))
-                    } else if let bookmaker = alert.bookmaker {
-                        BookmakerBadge(bookmaker: bookmaker, domain: bookmakerDomains[bookmaker])
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top, spacing: 16) {
+                if let leadingLogoURL {
+                    RemoteImage(url: leadingLogoURL) { image in
+                        image.resizable().scaledToFit()
                     }
+                    .frame(width: 36, height: 36)
+                    .clipShape(Circle())
                 }
 
-                Text(title)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(Color.ltTextPrimary)
-                    .lineLimit(1)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 8) {
+                        Text(alert.alertType)
+                            .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                            .tracking(0.6)
+                            .foregroundStyle(Color(hex: 0x5EA8FF))
 
-                if isStock {
-                    Text(alert.companyName ?? "")
-                        .font(.system(size: 13))
-                        .foregroundStyle(Color.ltTextSecondary)
-                } else if let opponentName {
-                    HStack(spacing: 4) {
-                        Text("vs")
-                        if let opponentLogoURL {
-                            RemoteImage(url: opponentLogoURL) { image in
-                                image.resizable().scaledToFit()
-                            }
-                            .frame(width: 14, height: 14)
-                            .clipShape(Circle())
+                        if isStock, let live = alert.liveValue {
+                            LiveBadge(text: Formatting.dollars(live))
+                        } else if let bookmaker = alert.bookmaker {
+                            BookmakerBadge(bookmaker: bookmaker, domain: bookmakerDomains[bookmaker])
                         }
-                        Text(opponentName)
                     }
-                    .font(.system(size: 13))
-                    .foregroundStyle(Color.ltTextSecondary)
-                } else {
-                    Text("Bet")
+
+                    Text(title)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(Color.ltTextPrimary)
+                        .lineLimit(1)
+
+                    if isStock {
+                        Text(alert.companyName ?? "")
+                            .font(.system(size: 13))
+                            .foregroundStyle(Color.ltTextSecondary)
+                            .lineLimit(1)
+                    } else if let opponentName {
+                        HStack(spacing: 4) {
+                            Text("vs")
+                            if let opponentLogoURL {
+                                RemoteImage(url: opponentLogoURL) { image in
+                                    image.resizable().scaledToFit()
+                                }
+                                .frame(width: 14, height: 14)
+                                .clipShape(Circle())
+                            }
+                            Text(opponentName)
+                        }
                         .font(.system(size: 13))
                         .foregroundStyle(Color.ltTextSecondary)
+                        .lineLimit(1)
+                    } else {
+                        Text("Bet")
+                            .font(.system(size: 13))
+                            .foregroundStyle(Color.ltTextSecondary)
+                    }
+
+                    if let dateLine {
+                        Text(dateLine)
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundStyle(Color.ltTextTertiary)
+                            .lineLimit(1)
+                    }
                 }
 
-                if let dateLine {
-                    Text(dateLine)
-                        .font(.system(size: 11, design: .monospaced))
+                Spacer(minLength: 0)
+
+                Button(action: onDelete) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(Color.ltTextTertiary)
                 }
+                .buttonStyle(.plain)
             }
 
-            Spacer(minLength: 0)
-
+            // Set At -> Target, centered as its own row instead of
+            // squeezed onto the same line as the title on a phone-width
+            // screen (that's what was crushing "San Diego Padres" down
+            // to "San Diego P...").
             HStack(alignment: .bottom, spacing: 8) {
+                Spacer(minLength: 0)
                 PillGroup(label: "Set at", value: setValue, style: .neutral)
                 Image(systemName: "arrow.right")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(isAbove ? Color.ltSuccess : Color.ltDanger)
                     .padding(.bottom, 10)
                 PillGroup(label: "Target", value: targetValueText, style: isAbove ? .success : .danger)
+                Spacer(minLength: 0)
             }
-
-            Button(action: onDelete) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Color.ltTextTertiary)
-            }
-            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity)
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 16)
