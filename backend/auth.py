@@ -12,6 +12,11 @@ from google.auth.transport import requests as google_requests
 # other app pretending to be us).
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
 
+# The iOS app has its OWN Google OAuth client ID (client IDs are tied to a
+# platform — a web origin vs. a Bundle ID — so it can't share the web
+# client ID above). Accept ID tokens issued for either one.
+GOOGLE_IOS_CLIENT_ID = os.environ.get("GOOGLE_IOS_CLIENT_ID")
+
 # Our OWN signing secret for LineTracker's session tokens — separate from
 # Google entirely. A random, private string; set it in the environment
 # and never commit it. If this leaks, anyone could forge a session for
@@ -30,11 +35,15 @@ def verify_google_token(credential):
     This is the step that actually proves "this really is that Google
     account," not just "someone typed this email into a box."
     """
-    if not credential or not GOOGLE_CLIENT_ID:
+    valid_audiences = [cid for cid in (GOOGLE_CLIENT_ID, GOOGLE_IOS_CLIENT_ID) if cid]
+    if not credential or not valid_audiences:
         return None
     try:
+        # A list here means "accept a token minted for ANY of these client
+        # IDs" — that's what lets both the web app and the iOS app share
+        # this one endpoint.
         info = google_id_token.verify_oauth2_token(
-            credential, google_requests.Request(), GOOGLE_CLIENT_ID
+            credential, google_requests.Request(), valid_audiences
         )
     except Exception as e:
         print(f"[auth] Google token verification failed: {e}")
