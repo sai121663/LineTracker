@@ -22,6 +22,33 @@ const BOOKMAKER_DOMAINS = {
   "Hard Rock Bet": "hardrock.com",
 };
 
+// Bookmakers SharpAPI sends that aren't in the map above (or whose logo
+// fails to load) fall back to a plain initial badge instead of silently
+// showing no icon at all.
+function BookmakerBadge({ bookmaker, logokitToken }) {
+  const [imgFailed, setImgFailed] = useState(false);
+  const domain = BOOKMAKER_DOMAINS[bookmaker];
+  const showLogo = Boolean(domain) && !imgFailed;
+
+  return (
+    <span className="bookmaker-badge">
+      {showLogo ? (
+        <img
+          src={`https://img.logokit.com/${domain}?token=${logokitToken}`}
+          alt={bookmaker}
+          className="bookmaker-badge-logo"
+          onError={() => setImgFailed(true)}
+        />
+      ) : (
+        <span className="bookmaker-badge-fallback" aria-hidden="true">
+          {bookmaker.charAt(0).toUpperCase()}
+        </span>
+      )}
+      {bookmaker}
+    </span>
+  );
+}
+
 function formatOdds(price) {
   if (price === null || price === undefined) return "—";
   return price > 0 ? `+${price}` : `${price}`;
@@ -229,17 +256,7 @@ export default function Dashboard({ userEmail }) {
                       </span>
                     )}
                     {alert.alert_type !== "Stock 🌱" && alert.bookmaker && (
-                      <span className="bookmaker-badge">
-                        {BOOKMAKER_DOMAINS[alert.bookmaker] && (
-                          <img
-                            src={`https://img.logokit.com/${BOOKMAKER_DOMAINS[alert.bookmaker]}?token=${LOGOKIT_TOKEN}`}
-                            alt={alert.bookmaker}
-                            className="bookmaker-badge-logo"
-                            onError={(e) => { e.target.style.display = "none"; }}
-                          />
-                        )}
-                        {alert.bookmaker}
-                      </span>
+                      <BookmakerBadge bookmaker={alert.bookmaker} logokitToken={LOGOKIT_TOKEN} />
                     )}
                   </div>
                   <p className="alert-card-title">{alertTitle(alert)}</p>

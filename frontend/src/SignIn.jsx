@@ -79,7 +79,12 @@ export default function SignIn({ onAuth }) {
           Sign in with Google to see your alerts and get notified the moment they hit.
         </p>
         <div ref={buttonRef} className="google-button-slot" />
-        {!ready && !error && <p className="sign-in-loading">Loading Google sign-in…</p>}
+        {!ready && !error && (
+          <div className="sign-in-loading">
+            <span className="sign-in-spinner" />
+            Loading Google sign-in…
+          </div>
+        )}
         {error && <p className="field-error" style={{ marginTop: "12px" }}>{error}</p>}
       </div>
     </div>
