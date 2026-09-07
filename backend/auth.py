@@ -16,8 +16,6 @@ GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
 # platform — a web origin vs. a Bundle ID — so it can't share the web
 # client ID above). Accept ID tokens issued for either one.
 GOOGLE_IOS_CLIENT_ID = os.environ.get("GOOGLE_IOS_CLIENT_ID")
-print(f"[debug] GOOGLE_IOS_CLIENT_ID={GOOGLE_IOS_CLIENT_ID!r}")
-print(f"[debug] GOOGLE_CLIENT_ID={GOOGLE_CLIENT_ID!r}")
 
 # Our OWN signing secret for LineTracker's session tokens — separate from
 # Google entirely. A random, private string; set it in the environment
