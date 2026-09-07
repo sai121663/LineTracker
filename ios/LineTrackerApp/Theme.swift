@@ -14,8 +14,9 @@ extension Color {
     static let ltTextSecondary = Color(hex: 0x8B92A0)
     static let ltTextTertiary = Color(hex: 0x565D69)
 
-    // index.css: --accent: blue; --success: #3DDC97; --danger: #E0585C;
+    // index.css: --accent: blue; --accent-dim: white; --success: #3DDC97; --danger: #E0585C;
     static let ltAccent = Color.blue
+    static let ltAccentDim = Color.white
     static let ltSuccess = Color(hex: 0x3DDC97)
     static let ltSuccessDim = Color(hex: 0x1A3B2E)
     static let ltDanger = Color(hex: 0xE0585C)

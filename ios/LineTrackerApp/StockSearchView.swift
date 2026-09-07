@@ -1,19 +1,44 @@
 import SwiftUI
 
-/// Port of StockSearch.jsx. Skips the FMP company-name autocomplete
-/// dropdown for v1 — plain ticker search still hits the same
-/// /stocks/price endpoint and covers the core "track a stock" flow.
+/// One FMP search result — either a company-name match ("search-name") or
+/// a ticker-symbol match ("search-symbol"), both endpoints return the
+/// same shape. Extra fields FMP sends back are ignored by the decoder.
+private struct StockSuggestion: Codable, Identifiable {
+    let symbol: String
+    let name: String
+    var id: String { symbol }
+}
+
+/// Port of StockSearch.jsx, styled to match the web app's dark theme
+/// instead of a plain iOS Form: the Company/Ticker toggle, live
+/// autocomplete dropdown (via FMP), dark result card, and the
+/// target-price slider all mirror the web layout as closely as SwiftUI
+/// allows.
 struct StockSearchView: View {
     var onSaved: () -> Void = {}
 
-    @State private var tickerInput = ""
+    private enum SearchMode {
+        case name, symbol
+    }
+
+    @State private var searchMode: SearchMode = .name
+    @State private var query = ""
+    @State private var suggestions: [StockSuggestion] = []
+    @State private var showDropdown = false
+    @State private var suggestionTask: Task<Void, Never>?
+
     @State private var stock: StockPrice?
+    @State private var companyName: String?
+    @State private var searchedTicker = ""
     @State private var searching = false
     @State private var searchError: String?
 
     @State private var targetValue: Double = 0
+    @State private var priceInput = ""
     @State private var saving = false
     @State private var saveError: String?
+
+    @FocusState private var searchFocused: Bool
 
     private var direction: String {
         guard let stock else { return "above" }
@@ -21,80 +46,360 @@ struct StockSearchView: View {
     }
 
     var body: some View {
-        Form {
-            Section("Look up a ticker") {
-                HStack {
-                    TextField("e.g. AAPL", text: $tickerInput)
-                        .textInputAutocapitalization(.characters)
-                        .autocorrectionDisabled()
-                    Button("Search") { Task { await search() } }
-                        .disabled(tickerInput.trimmingCharacters(in: .whitespaces).isEmpty || searching)
+        ZStack {
+            Color.ltBackground.ignoresSafeArea()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    header
+                    searchSection
+
+                    if let searchError {
+                        Text(searchError)
+                            .font(.system(size: 13))
+                            .foregroundStyle(Color.ltDanger)
+                    }
+
+                    if searching {
+                        ProgressView()
+                            .tint(Color.ltAccent)
+                            .frame(maxWidth: .infinity)
+                    }
+
+                    if let stock {
+                        resultCard(stock)
+                        alertForm(stock)
+                    }
                 }
-                if searching { ProgressView() }
-                if let searchError { Text(searchError).foregroundStyle(.red).font(.footnote) }
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .scrollDismissesKeyboard(.interactively)
+        }
+        .toolbarBackground(Color.ltBackground, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    // MARK: - Header
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Track a stock")
+                .font(.system(size: 26, weight: .bold))
+                .foregroundStyle(Color.ltTextPrimary)
+            Text("Look up a ticker, set your target, get an email when it hits.")
+                .font(.system(size: 14))
+                .foregroundStyle(Color.ltTextSecondary)
+        }
+    }
+
+    // MARK: - Search
+
+    private var searchSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                modeButton("Company", mode: .name)
+                modeButton("Ticker", mode: .symbol)
             }
 
-            if let stock {
-                Section("Result") {
-                    HStack {
-                        Text(stock.ticker).font(.headline)
-                        Spacer()
-                        Text(Formatting.dollars(stock.price)).font(.title3.monospacedDigit())
+            ZStack(alignment: .topLeading) {
+                TextField("Search", text: $query)
+                    .focused($searchFocused)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(searchMode == .symbol ? .characters : .words)
+                    .submitLabel(.search)
+                    .font(.system(size: 15, design: .monospaced))
+                    .foregroundStyle(Color.ltTextPrimary)
+                    .padding(12)
+                    .background(Color.ltSurface)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 4)
+                            .stroke(searchFocused ? Color.ltAccent : Color.ltBorder, lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                    .onChange(of: query) { _, newValue in
+                        searchError = nil
+                        scheduleSuggestions(for: newValue)
                     }
-                    if let prev = stock.previousClose {
-                        Text("Closed at \(Formatting.dollars(prev))")
-                            .font(.footnote).foregroundStyle(.secondary)
-                    }
-                }
+                    .onSubmit { submitSearch() }
 
-                Section("Set your target") {
-                    HStack {
-                        Text(direction == "above" ? "▲" : "▼")
-                            .foregroundStyle(direction == "above" ? .green : .red)
-                        Text(Formatting.dollars(targetValue))
-                            .font(.headline.monospacedDigit())
-                            .foregroundStyle(direction == "above" ? .green : .red)
-                    }
-                    Slider(value: $targetValue, in: (stock.price * 0.5)...(stock.price * 1.5))
-                    HStack {
-                        Text(Formatting.dollars(stock.price * 0.5)).font(.caption2).foregroundStyle(.secondary)
-                        Spacer()
-                        Text("Current: \(Formatting.dollars(stock.price))").font(.caption2).foregroundStyle(.secondary)
-                        Spacer()
-                        Text(Formatting.dollars(stock.price * 1.5)).font(.caption2).foregroundStyle(.secondary)
-                    }
-                    HStack {
-                        Text("Or type price:")
-                        TextField("price", value: $targetValue, format: .number)
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
-                    }
-                }
-
-                if let saveError { Text(saveError).foregroundStyle(.red).font(.footnote) }
-
-                Section {
-                    Button(saving ? "Saving…" : "Set alert") { Task { await save() } }
-                        .disabled(saving)
+                if showDropdown && !suggestions.isEmpty {
+                    dropdown.offset(y: 52)
                 }
             }
         }
-        .navigationTitle("Track a stock")
+        .zIndex(1)
     }
 
-    private func search() async {
+    private func modeButton(_ label: String, mode: SearchMode) -> some View {
+        let isActive = searchMode == mode
+        return Button {
+            searchMode = mode
+            if !query.trimmingCharacters(in: .whitespaces).isEmpty {
+                scheduleSuggestions(for: query, immediate: true)
+            }
+        } label: {
+            Text(label)
+                .font(.system(size: 14, weight: .semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+        }
+        .buttonStyle(.plain)
+        .background(isActive ? Color.ltAccentDim : Color.ltBackground)
+        .foregroundStyle(isActive ? Color.ltAccent : Color.ltTextSecondary)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .stroke(isActive ? Color.ltAccent : Color.ltBorder, lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+    }
+
+    private var dropdown: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(suggestions.enumerated()), id: \.element.id) { index, s in
+                Button {
+                    selectSuggestion(s)
+                } label: {
+                    HStack(spacing: 10) {
+                        Text(s.symbol)
+                            .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(Color.ltTextPrimary)
+                            .frame(minWidth: 52, alignment: .leading)
+                        Text(s.name)
+                            .font(.system(size: 13))
+                            .foregroundStyle(Color.ltTextSecondary)
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+
+                if index < suggestions.count - 1 {
+                    Rectangle().fill(Color.ltBorder).frame(height: 1)
+                }
+            }
+        }
+        .background(Color.ltSurfaceRaised)
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.ltBorderBright, lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Result card
+
+    private func resultCard(_ stock: StockPrice) -> some View {
+        HStack(spacing: 12) {
+            if let url = URL(string: "https://img.logo.dev/ticker/\(searchedTicker)?token=\(Config.logoDevToken)") {
+                RemoteImage(url: url) { image in
+                    image.resizable().scaledToFit()
+                } fallback: {
+                    Circle().fill(Color.ltBorderBright)
+                }
+                .frame(width: 40, height: 40)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(stock.ticker)
+                    .font(.system(size: 18, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(Color.ltTextPrimary)
+
+                Text("Closed at \(stock.previousClose.map { Formatting.dollars($0) } ?? "—")")
+                    .font(.system(size: 11, design: .monospaced))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2)
+                    .background(Color.white)
+                    .foregroundStyle(.black)
+                    .overlay(Capsule().stroke(Color.ltBorderBright, lineWidth: 1))
+                    .clipShape(Capsule())
+            }
+
+            Spacer(minLength: 8)
+
+            Text(Formatting.dollars(stock.price))
+                .font(.system(size: 26, weight: .semibold, design: .monospaced))
+                .foregroundStyle(Color.ltTextPrimary)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.ltSurface)
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.ltBorder, lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    // MARK: - Alert form
+
+    private func alertForm(_ stock: StockPrice) -> some View {
+        let isAbove = targetValue >= stock.price
+        let sliderColor = isAbove ? Color.ltSuccess : Color.ltDanger
+
+        return VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Target Price:")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.ltTextSecondary)
+                Spacer()
+                HStack(spacing: 4) {
+                    Text(isAbove ? "▲" : "▼")
+                    Text(Formatting.dollars(targetValue))
+                }
+                .font(.system(size: 15, weight: .semibold, design: .monospaced))
+                .foregroundStyle(sliderColor)
+            }
+
+            HStack(spacing: 10) {
+                Text("Or type price:")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.ltTextSecondary)
+                TextField("price", text: $priceInput)
+                    .keyboardType(.decimalPad)
+                    .font(.system(size: 15, design: .monospaced))
+                    .foregroundStyle(Color.ltTextPrimary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .frame(width: 110)
+                    .background(Color.ltBackground)
+                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.ltBorder, lineWidth: 1))
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                    .onChange(of: priceInput) { _, newValue in
+                        if let val = Double(newValue), val > 0 {
+                            targetValue = val
+                        }
+                    }
+                Spacer()
+            }
+
+            VStack(spacing: 8) {
+                Slider(value: $targetValue, in: (stock.price * 0.5)...(stock.price * 1.5))
+                    .tint(sliderColor)
+                    .onChange(of: targetValue) { _, newValue in
+                        priceInput = String(format: "%.2f", newValue)
+                    }
+                HStack {
+                    Text(Formatting.dollars(stock.price * 0.5))
+                        .foregroundStyle(Color.ltTextTertiary)
+                    Spacer()
+                    Text("Current: \(Formatting.dollars(stock.price))")
+                        .foregroundStyle(Color.ltTextSecondary)
+                    Spacer()
+                    Text(Formatting.dollars(stock.price * 1.5))
+                        .foregroundStyle(Color.ltTextTertiary)
+                }
+                .font(.system(size: 11, design: .monospaced))
+            }
+
+            if let saveError {
+                Text(saveError)
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.ltDanger)
+            }
+
+            Button {
+                Task { await save() }
+            } label: {
+                Text(saving ? "Saving…" : "Set alert")
+                    .font(.system(size: 15, weight: .semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 13)
+            }
+            .buttonStyle(.plain)
+            .background(Color.ltAccent)
+            .foregroundStyle(Color(hex: 0x1A1304))
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+            .opacity(saving ? 0.6 : 1)
+            .disabled(saving)
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.ltSurface)
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.ltBorder, lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    // MARK: - Search / suggestions
+
+    private func scheduleSuggestions(for text: String, immediate: Bool = false) {
+        suggestionTask?.cancel()
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else {
+            suggestions = []
+            showDropdown = false
+            return
+        }
+        suggestionTask = Task {
+            if !immediate {
+                try? await Task.sleep(nanoseconds: 300_000_000)
+            }
+            guard !Task.isCancelled else { return }
+            await fetchSuggestions(trimmed)
+        }
+    }
+
+    private func fetchSuggestions(_ query: String) async {
+        let path = searchMode == .name ? "search-name" : "search-symbol"
+        var components = URLComponents(string: "https://financialmodelingprep.com/stable/\(path)")
+        components?.queryItems = [
+            URLQueryItem(name: "query", value: query),
+            URLQueryItem(name: "apikey", value: Config.fmpAPIKey),
+        ]
+        guard let url = components?.url else { return }
+
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            guard !Task.isCancelled else { return }
+            let decoded = try JSONDecoder().decode([StockSuggestion].self, from: data)
+            suggestions = decoded
+            showDropdown = true
+        } catch {
+            suggestions = []
+        }
+    }
+
+    private func selectSuggestion(_ s: StockSuggestion) {
+        query = s.symbol
+        showDropdown = false
+        suggestions = []
+        searchError = nil
+        searchFocused = false
+        Task { await performSearch(ticker: s.symbol, companyName: s.name) }
+    }
+
+    private func submitSearch() {
+        if let first = suggestions.first {
+            selectSuggestion(first)
+            return
+        }
+        let trimmed = query.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        showDropdown = false
+        Task { await performSearch(ticker: trimmed.uppercased(), companyName: nil) }
+    }
+
+    private func performSearch(ticker: String, companyName: String?) async {
         searching = true
         searchError = nil
         stock = nil
         do {
-            let result = try await APIClient.shared.getStockPrice(ticker: tickerInput.trimmingCharacters(in: .whitespaces).uppercased())
+            let result = try await APIClient.shared.getStockPrice(ticker: ticker)
             stock = result
+            self.companyName = companyName
+            searchedTicker = ticker
             targetValue = result.price
+            priceInput = String(format: "%.2f", result.price)
         } catch {
             searchError = "Could not find that ticker. Double check the symbol."
         }
         searching = false
     }
+
+    // MARK: - Save
 
     private func save() async {
         guard let stock else { return }
@@ -104,7 +409,7 @@ struct StockSearchView: View {
             _ = try await APIClient.shared.createAlert(NewAlertRequest(
                 alertType: "Stock 🌱",
                 ticker: stock.ticker,
-                companyName: nil,
+                companyName: companyName,
                 sport: nil, eventId: nil, homeTeam: nil, awayTeam: nil,
                 homeLogo: nil, awayLogo: nil, market: nil, outcomeName: nil, bookmaker: nil,
                 targetValue: targetValue,

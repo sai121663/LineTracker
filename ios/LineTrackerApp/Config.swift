@@ -17,4 +17,9 @@ enum Config {
     // doesn't have that restriction, so the iOS app uses it instead.
     // A "pk_" token like this is meant to be embedded in client code.
     static let logoDevToken = "pk_Broua1rpRo-c0XB-Grdn1g"
+
+    // Same Financial Modeling Prep key as frontend/.env's VITE_FMP_API_KEY,
+    // used for the company-name/ticker-symbol autocomplete search on the
+    // "Track a stock" page.
+    static let fmpAPIKey = "kIYiw00SOXJVw7tvUehQZx5kkQpvU4mZ"
 }

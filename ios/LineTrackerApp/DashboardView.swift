@@ -394,7 +394,7 @@ private struct BookmakerBadge: View {
 /// onError={() => element hides itself}. An optional fallback view is
 /// shown on failure instead, for spots (like BookmakerBadge) that want
 /// one.
-private struct RemoteImage<Content: View, Fallback: View>: View {
+struct RemoteImage<Content: View, Fallback: View>: View {
     let url: URL
     @ViewBuilder let content: (Image) -> Content
     @ViewBuilder let fallback: () -> Fallback
