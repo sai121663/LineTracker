@@ -121,8 +121,22 @@ enum Formatting {
     /// treats other naive backend timestamps), then a couple of manual
     /// fallback formats for stray non-"T" separators.
     static func parseFlexibleISO(_ iso: String) -> Date? {
-        let trimmed = iso.trimmingCharacters(in: .whitespacesAndNewlines)
+        var trimmed = iso.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
+
+        // Both ISO8601DateFormatter's .withFractionalSeconds and the
+        // manual ".SSS" pattern below expect exactly 3 fractional digits
+        // (milliseconds). But this backend's own naive timestamps
+        // (created_at, triggered_at -- anything from
+        // datetime.utcnow().isoformat()) carry Python's 6-digit
+        // microseconds, e.g. "...45.123456", which both silently fail
+        // to parse. Truncate to 3 digits up front so every path below
+        // actually matches -- this is why triggered_at was coming back
+        // nil and the bell sheet's "time ago" label was blank.
+        if let match = trimmed.range(of: #"\.(\d{4,})"#, options: .regularExpression) {
+            let digits = trimmed[match].dropFirst() // drop the leading "."
+            trimmed.replaceSubrange(match, with: ".\(digits.prefix(3))")
+        }
 
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
