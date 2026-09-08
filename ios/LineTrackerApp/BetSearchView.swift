@@ -88,7 +88,7 @@ struct BetSearchView: View {
             Text("Track a betting line")
                 .font(.system(size: 26, weight: .bold))
                 .foregroundStyle(Color.ltTextPrimary)
-            Text("Pick your bet, set a target, get an email when the odds move.")
+            Text("Pick your bet, set a target, get notified when the odds move.")
                 .font(.system(size: 14))
                 .foregroundStyle(Color.ltTextSecondary)
         }

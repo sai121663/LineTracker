@@ -152,7 +152,7 @@ struct StockSearchView: View {
             Text("Track a stock")
                 .font(.system(size: 26, weight: .bold))
                 .foregroundStyle(Color.ltTextPrimary)
-            Text("Look up a ticker, set your target, get an email when it hits.")
+            Text("Look up a ticker, set your target, get notified when it hits.")
                 .font(.system(size: 14))
                 .foregroundStyle(Color.ltTextSecondary)
         }
