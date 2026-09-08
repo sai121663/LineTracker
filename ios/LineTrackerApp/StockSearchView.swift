@@ -26,6 +26,10 @@ struct StockSearchView: View {
     @State private var suggestions: [StockSuggestion] = []
     @State private var showDropdown = false
     @State private var suggestionTask: Task<Void, Never>?
+    // Set right before we programmatically assign `query` ourselves (after
+    // picking a suggestion), so the onChange below doesn't treat that as
+    // the user typing and immediately re-open the dropdown it just closed.
+    @State private var suppressNextQueryChange = false
 
     @State private var stock: StockPrice?
     @State private var companyName: String?
@@ -122,6 +126,10 @@ struct StockSearchView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 4))
                     .onChange(of: query) { _, newValue in
                         searchError = nil
+                        if suppressNextQueryChange {
+                            suppressNextQueryChange = false
+                            return
+                        }
                         scheduleSuggestions(for: newValue)
                     }
                     .onSubmit { submitSearch() }
@@ -363,6 +371,8 @@ struct StockSearchView: View {
     }
 
     private func selectSuggestion(_ s: StockSuggestion) {
+        suggestionTask?.cancel()
+        suppressNextQueryChange = true
         query = s.symbol
         showDropdown = false
         suggestions = []
