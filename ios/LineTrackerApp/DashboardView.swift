@@ -5,6 +5,8 @@ import SwiftUI
 /// the web dashboard, instead of a default system List.
 struct DashboardView: View {
     @EnvironmentObject var auth: AuthManager
+    var onAddStock: () -> Void = {}
+    var onAddBet: () -> Void = {}
     @State private var alerts: [Alert] = []
     @State private var loading = true
     @State private var errorMessage: String?
@@ -97,10 +99,28 @@ struct DashboardView: View {
         .task { await load() }
     }
 
+    // Port of Dashboard.jsx's .dashboard-head: title on the leading edge,
+    // "+ Stock" / "+ Bet" quick-add buttons on the trailing edge.
     private var header: some View {
-        Text("Your Alerts")
-            .font(.system(size: 26, weight: .bold))
-            .foregroundStyle(Color.ltTextPrimary)
+        HStack(alignment: .top, spacing: 16) {
+            Text("Your Alerts")
+                .font(.system(size: 26, weight: .bold))
+                .foregroundStyle(Color.ltTextPrimary)
+
+            Spacer(minLength: 8)
+
+            HStack(spacing: 10) {
+                Button(action: onAddStock) {
+                    Text("+ Stock")
+                }
+                .buttonStyle(DashboardActionButtonStyle(kind: .ghost))
+
+                Button(action: onAddBet) {
+                    Text("+ Bet")
+                }
+                .buttonStyle(DashboardActionButtonStyle(kind: .primary))
+            }
+        }
     }
 
     private func load() async {
@@ -442,6 +462,40 @@ struct RemoteImage<Content: View, Fallback: View>: View {
             default:
                 Color.clear
             }
+        }
+    }
+}
+
+/// Ports .btn-primary and .btn-ghost (as BetSearch.css's site-wide
+/// override of it — filled light pill, dark text — actually renders,
+/// since plain CSS classes aren't scoped per-component) from
+/// index.css/Dashboard.css/BetSearch.css.
+private struct DashboardActionButtonStyle: ButtonStyle {
+    enum Kind { case primary, ghost }
+    let kind: Kind
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 14, weight: .semibold))
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(background)
+            .foregroundStyle(foreground)
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+            .opacity(configuration.isPressed ? 0.88 : 1)
+    }
+
+    private var background: Color {
+        switch kind {
+        case .primary: return Color.ltAccent
+        case .ghost: return Color.ltTextPrimary
+        }
+    }
+
+    private var foreground: Color {
+        switch kind {
+        case .primary: return Color(hex: 0x1A1304)
+        case .ghost: return Color.ltBackground
         }
     }
 }

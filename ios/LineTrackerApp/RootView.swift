@@ -19,7 +19,12 @@ struct MainTabView: View {
 
     var body: some View {
         TabView(selection: $selection) {
-            NavigationStack { DashboardView() }
+            NavigationStack {
+                DashboardView(
+                    onAddStock: { selection = 1 },
+                    onAddBet: { selection = 2 }
+                )
+            }
                 .tabItem { Label("Alerts", systemImage: "bell") }
                 .tag(0)
 
