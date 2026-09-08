@@ -1,5 +1,6 @@
 import SwiftUI
 import GoogleSignIn
+import AuthenticationServices
 
 /// Port of SignIn.jsx — swaps the web's Google Identity Services button
 /// for the native GoogleSignIn-iOS SDK, then hands the ID token to the
@@ -29,12 +30,26 @@ struct SignInView: View {
                     .font(.system(.title2, weight: .bold))
                     .foregroundStyle(Color.ltTextPrimary)
 
-                Text("Sign in with Google to see your alerts and get notified the moment they hit.")
+                Text("Sign in to see your alerts and get notified the moment they hit.")
                     .font(.subheadline)
                     .foregroundStyle(Color.ltTextSecondary)
                     .multilineTextAlignment(.center)
                     .padding(.top, 4)
                     .padding(.bottom, 20)
+
+                // Apple requires Sign in with Apple whenever a third-party
+                // login (Google, here) is offered as an equivalent option
+                // — App Store Review Guideline 4.8.
+                SignInWithAppleButton(.signIn) { request in
+                    request.requestedScopes = [.email]
+                } onCompletion: { result in
+                    handleAppleCompletion(result)
+                }
+                .signInWithAppleButtonStyle(.white)
+                .frame(height: 50)
+                .clipShape(Capsule())
+                .disabled(signingIn)
+                .padding(.bottom, 10)
 
                 Button {
                     Task { await signIn() }
@@ -102,6 +117,41 @@ struct SignInView: View {
             // network, or the backend rejecting the token.
             errorMessage = "Sign-in failed: \(error.localizedDescription)"
             print("[SignIn] error: \(error)")
+        }
+    }
+
+    private func handleAppleCompletion(_ result: Result<ASAuthorization, Error>) {
+        switch result {
+        case .success(let authorization):
+            guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+                  let tokenData = credential.identityToken,
+                  let identityToken = String(data: tokenData, encoding: .utf8) else {
+                errorMessage = "Apple didn't return an identity token."
+                return
+            }
+            Task { await signInWithApple(identityToken: identityToken) }
+        case .failure(let error):
+            // The user tapping "Cancel" on Apple's own sheet comes through
+            // here too -- that's not a real error, so don't show one.
+            if (error as NSError).code == ASAuthorizationError.canceled.rawValue {
+                return
+            }
+            errorMessage = "Sign-in failed: \(error.localizedDescription)"
+            print("[SignIn] Apple error: \(error)")
+        }
+    }
+
+    @MainActor
+    private func signInWithApple(identityToken: String) async {
+        errorMessage = nil
+        signingIn = true
+        defer { signingIn = false }
+        do {
+            let session = try await APIClient.shared.signInWithApple(identityToken: identityToken)
+            auth.signIn(token: session.token, email: session.email)
+        } catch {
+            errorMessage = "Sign-in failed: \(error.localizedDescription)"
+            print("[SignIn] Apple backend error: \(error)")
         }
     }
 }

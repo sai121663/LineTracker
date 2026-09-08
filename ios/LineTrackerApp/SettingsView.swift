@@ -26,6 +26,9 @@ struct SettingsView: View {
 
     @State private var pushAuthStatus: UNAuthorizationStatus = .notDetermined
     @State private var showSignOutConfirm = false
+    @State private var showDeleteAccountConfirm = false
+    @State private var deletingAccount = false
+    @State private var deleteAccountError: String?
     // Set right before loadEmailPreference() assigns the fetched value to
     // notifyEmail, so that assignment's own onChange doesn't immediately
     // PUT the value we just loaded straight back to the server.
@@ -68,6 +71,35 @@ struct SettingsView: View {
                             .padding(.vertical, 4)
                         }
                         .buttonStyle(.plain)
+
+                        Divider().overlay(Color.ltBorder)
+
+                        Button {
+                            showDeleteAccountConfirm = true
+                        } label: {
+                            HStack {
+                                if deletingAccount {
+                                    ProgressView().tint(Color.ltDanger)
+                                } else {
+                                    Text("Delete Account")
+                                        .font(.system(size: 15, weight: .semibold))
+                                }
+                                Spacer()
+                                if !deletingAccount {
+                                    Image(systemName: "trash")
+                                }
+                            }
+                            .foregroundStyle(Color.ltDanger)
+                            .padding(.vertical, 4)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(deletingAccount)
+
+                        if let deleteAccountError {
+                            Text(deleteAccountError)
+                                .font(.system(size: 12))
+                                .foregroundStyle(Color.ltDanger)
+                        }
                     }
 
                     section(
@@ -138,6 +170,18 @@ struct SettingsView: View {
         ) {
             Button("Sign Out", role: .destructive) { auth.signOut() }
             Button("Cancel", role: .cancel) {}
+        }
+        .confirmationDialog(
+            "Delete your account?",
+            isPresented: $showDeleteAccountConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Delete Account", role: .destructive) {
+                Task { await deleteAccount() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This permanently deletes every alert you've set and your notification preferences. This can't be undone.")
         }
     }
 
@@ -344,6 +388,24 @@ struct SettingsView: View {
             emailSettingsError = nil
         } catch {
             emailSettingsError = "Couldn't save — check your connection"
+        }
+    }
+
+    // MARK: - Delete account
+
+    @MainActor
+    private func deleteAccount() async {
+        deletingAccount = true
+        deleteAccountError = nil
+        do {
+            try await APIClient.shared.deleteAccount()
+            // Success tears down this whole view (RootView swaps back to
+            // SignInView once auth.session is nil), so there's no need to
+            // reset deletingAccount here.
+            auth.signOut()
+        } catch {
+            deleteAccountError = "Couldn't delete account: \(error.localizedDescription)"
+            deletingAccount = false
         }
     }
 }

@@ -83,6 +83,22 @@ final class APIClient {
         return Session(token: resp.token, email: resp.email)
     }
 
+    func signInWithApple(identityToken: String) async throws -> Session {
+        let body = try encoder.encode(["identity_token": identityToken])
+        let data = try await request(path: "/auth/apple", method: "POST", body: body, authorized: false)
+        struct Resp: Codable { let token: String; let email: String }
+        let resp = try decoder.decode(Resp.self, from: data)
+        return Session(token: resp.token, email: resp.email)
+    }
+
+    /// Apple requires apps that support signing in to also support
+    /// deleting the account in-app -- see app.py's /account route for
+    /// what actually gets erased server-side. The caller is responsible
+    /// for signing the device out locally right after this succeeds.
+    func deleteAccount() async throws {
+        _ = try await request(path: "/account", method: "DELETE")
+    }
+
     // MARK: - Alerts
 
     func getAlerts() async throws -> [Alert] {

@@ -24,7 +24,7 @@ from notifications import send_alert_email
 
 from models import db, Alert, UserSettings
 from scheduler import poll_alerts
-from auth import verify_google_token, issue_session_token, require_auth
+from auth import verify_google_token, verify_apple_token, issue_session_token, require_auth
 
 app = Flask(__name__)
 CORS(app)
@@ -428,6 +428,28 @@ def google_login():
     return jsonify({"token": token, "email": email})
 
 
+@app.route("/auth/apple", methods=["POST"])
+def apple_login():
+    """Same job as google_login() above, for Sign in with Apple: the iOS
+    app hands us the raw identity token ASAuthorizationAppleIDCredential
+    gave it, we verify it really came from Apple and really is for THIS
+    app, then hand back the exact same kind of LineTracker session token
+    either sign-in method produces — everything downstream (require_auth,
+    alerts, settings) doesn't know or care which provider a user signed
+    in with."""
+    data = request.get_json() or {}
+    identity_token = data.get("identity_token")
+    if not identity_token:
+        return jsonify({"error": "Missing identity_token"}), 400
+
+    email = verify_apple_token(identity_token)
+    if not email:
+        return jsonify({"error": "Invalid Apple credential"}), 401
+
+    token = issue_session_token(email)
+    return jsonify({"token": token, "email": email})
+
+
 # --- Alert CRUD routes ---
 
 @app.route("/alerts", methods=["POST"])
@@ -561,6 +583,25 @@ def update_settings():
     db.session.commit()
 
     return jsonify(settings.to_dict())
+
+
+@app.route("/account", methods=["DELETE"])
+@require_auth
+def delete_account():
+    """Apple requires apps that support signing in to also support
+    deleting the account from inside the app (App Store Review Guideline
+    5.1.1(v)) -- not just signing out. There's no separate "users" table
+    to drop a row from here (an account is just whatever email Google/
+    Apple verified, re-derived fresh on every sign-in), so "delete the
+    account" means erasing every trace of that email from LineTracker's
+    own data: every alert it owns, and its notification-preferences row.
+    The client signs the device out right after this succeeds.
+    """
+    email = request.user_email
+    Alert.query.filter(db.func.lower(Alert.user_email) == email).delete(synchronize_session=False)
+    UserSettings.query.filter_by(user_email=email).delete(synchronize_session=False)
+    db.session.commit()
+    return jsonify({"message": "Account deleted"})
 
 
 @app.route("/ping", methods=["GET"])
