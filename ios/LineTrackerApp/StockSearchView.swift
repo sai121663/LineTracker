@@ -168,7 +168,7 @@ struct StockSearchView: View {
             }
 
             ZStack(alignment: .topLeading) {
-                TextField("Search", text: $query)
+                TextField("", text: $query, prompt: Text("Search").foregroundStyle(Color.ltTextTertiary))
                     .focused($searchFocused)
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(searchMode == .symbol ? .characters : .words)
