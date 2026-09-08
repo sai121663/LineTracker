@@ -160,34 +160,39 @@ struct SettingsView: View {
         }
     }
 
+    // Was a Button wrapping the whole row with .disabled(pushAuthStatus
+    // != .denied) -- meant to gate the "tap row to open Settings"
+    // behavior, but .disabled() cascades to every control inside it,
+    // so it was also silently disabling the Toggle in the one case
+    // (not denied) where the Toggle is actually shown. Using
+    // onTapGesture instead of Button means only the row's own tap is
+    // gated, not the Toggle nested inside it.
     private var pushRow: some View {
-        Button {
-            if pushAuthStatus == .denied { openSystemSettings() }
-        } label: {
-            HStack(spacing: 12) {
-                iconBadge("bell.badge.fill")
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Push Notifications")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.ltTextPrimary)
-                    Text(pushSubtitle)
-                        .font(.system(size: 12))
-                        .foregroundStyle(pushAuthStatus == .denied ? Color.ltDanger : Color.ltTextSecondary)
-                }
-                Spacer()
-                if pushAuthStatus == .denied {
-                    Image(systemName: "chevron.right")
-                        .foregroundStyle(Color.ltTextTertiary)
-                } else {
-                    Toggle("", isOn: $wantsPush)
-                        .labelsHidden()
-                        .tint(Color.ltSuccess)
-                }
+        HStack(spacing: 12) {
+            iconBadge("bell.badge.fill")
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Push Notifications")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.ltTextPrimary)
+                Text(pushSubtitle)
+                    .font(.system(size: 12))
+                    .foregroundStyle(pushAuthStatus == .denied ? Color.ltDanger : Color.ltTextSecondary)
             }
-            .padding(.vertical, 4)
+            Spacer()
+            if pushAuthStatus == .denied {
+                Image(systemName: "chevron.right")
+                    .foregroundStyle(Color.ltTextTertiary)
+            } else {
+                Toggle("", isOn: $wantsPush)
+                    .labelsHidden()
+                    .tint(Color.ltSuccess)
+            }
         }
-        .buttonStyle(.plain)
-        .disabled(pushAuthStatus != .denied)
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if pushAuthStatus == .denied { openSystemSettings() }
+        }
     }
 
     // MARK: - Text (placeholder — no SMS provider wired up yet)
