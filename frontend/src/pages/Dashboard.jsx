@@ -196,7 +196,7 @@ export default function Dashboard({ userEmail }) {
   return (
     <div className="dashboard">
       <div className="dashboard-head">
-        <h1>Your alerts</h1>
+        <h1>Your Alerts</h1>
         <div className="dashboard-actions">
           <Link to="/stocks" className="btn btn-ghost">+ Stock</Link>
           <Link to="/bets" className="btn btn-primary">+ Bet</Link>

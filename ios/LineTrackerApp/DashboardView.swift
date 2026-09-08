@@ -73,7 +73,7 @@ struct DashboardView: View {
         // system's automatic large title. A NavigationStack's large
         // title inside a TabView + toolbarBackground combo like this
         // one has a well-known rendering glitch where it silently
-        // fails to draw on some appearances ("Your alerts" going
+        // fails to draw on some appearances ("Your Alerts" going
         // blank); drawing it ourselves sidesteps that entirely.
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
@@ -93,7 +93,7 @@ struct DashboardView: View {
     }
 
     private var header: some View {
-        Text("Your alerts")
+        Text("Your Alerts")
             .font(.system(size: 26, weight: .bold))
             .foregroundStyle(Color.ltTextPrimary)
     }
