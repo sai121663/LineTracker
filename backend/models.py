@@ -69,3 +69,27 @@ class Alert(db.Model):
             "user_email": self.user_email,
             "commence_time": self.commence_time
         }
+
+# Per-account preferences — the first piece of "this is a real account,
+# not just a string on each alert" state in this app. One row per email,
+# created lazily the first time someone actually changes a setting (see
+# app.py's /settings routes) rather than at signup, since Google OAuth
+# never creates a row of its own for a new user today.
+class UserSettings(db.Model):
+    __tablename__ = "user_settings"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_email = db.Column(db.String(120), unique=True, nullable=False)
+
+    # Whether alert-trigger emails should actually be sent. Defaults to
+    # True everywhere a row doesn't exist yet (see get_settings/
+    # update_settings in app.py and the lookup in scheduler.py's
+    # poll_alerts) so a user who's never touched this setting keeps
+    # getting emails exactly as before this existed.
+    notify_email = db.Column(db.Boolean, default=True, nullable=False)
+
+    def to_dict(self):
+        return {
+            "user_email": self.user_email,
+            "notify_email": self.notify_email,
+        }

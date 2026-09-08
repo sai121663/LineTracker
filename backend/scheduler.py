@@ -178,7 +178,7 @@ def check_threshold(current_value, target_value, direction):
     return False
 
 
-def poll_alerts(app, db, Alert, sharp_api_key, send_email_func=None):
+def poll_alerts(app, db, Alert, sharp_api_key, send_email_func=None, UserSettings=None):
     """
     Checks all untriggered alerts against live data.
     Call this on a schedule (e.g. every 5 minutes via APScheduler).
@@ -190,6 +190,12 @@ def poll_alerts(app, db, Alert, sharp_api_key, send_email_func=None):
     same underlying data. Same idea for stock alerts sharing a ticker
     and yfinance. Actual network calls now scale with how many distinct
     games/stocks are being tracked, not how many alerts or users exist.
+
+    UserSettings (optional) is the per-account preferences model — if
+    given, a triggered alert whose owner has turned email off skips the
+    actual send but still gets marked triggered, same as if the email
+    had gone out. Passing None (or a user with no settings row yet)
+    means "send it," matching behavior from before this setting existed.
     """
     with app.app_context():
         alerts = Alert.query.filter_by(triggered=False).all()
@@ -261,14 +267,24 @@ def poll_alerts(app, db, Alert, sharp_api_key, send_email_func=None):
                 # (built inside send_email_func, which reads alert.triggered_at)
                 # actually has a timestamp to show instead of blank/"—". Only
                 # kept — and only marked triggered, which removes it from the
-                # dashboard — once the email has actually gone out. If the
-                # send fails, roll the timestamp back and leave the alert
-                # active so it retries on the next poll cycle instead of
-                # silently vanishing with no notification sent.
+                # dashboard — once the email has actually gone out (or was
+                # deliberately skipped because the user turned it off — see
+                # wants_email below). If the send fails, roll the timestamp
+                # back and leave the alert active so it retries on the next
+                # poll cycle instead of silently vanishing with no
+                # notification sent.
                 alert.triggered_at = datetime.utcnow()
 
+                wants_email = True
+                if UserSettings is not None:
+                    settings = UserSettings.query.filter_by(user_email=alert.user_email).first()
+                    if settings is not None:
+                        wants_email = settings.notify_email
+
                 email_sent = True
-                if send_email_func:
+                if not wants_email:
+                    print(f"[poll] Alert {alert.id} triggered but user has email notifications off — skipping send")
+                elif send_email_func:
                     email_sent = send_email_func(alert)
                     if not email_sent:
                         print(f"[poll] Alert {alert.id} email failed to send — leaving alert active to retry next cycle")

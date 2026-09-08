@@ -18,11 +18,19 @@ struct SettingsView: View {
     @EnvironmentObject var auth: AuthManager
     @Environment(\.dismiss) private var dismiss
 
+    // Local cache, so the toggle shows something instantly and still
+    // works offline — but the backend (loaded in loadEmailPreference())
+    // is the real source of truth once it's reachable.
     @AppStorage("lt_notifyEmail") private var notifyEmail = true
     @AppStorage("lt_wantsPush") private var wantsPush = false
 
     @State private var pushAuthStatus: UNAuthorizationStatus = .notDetermined
     @State private var showSignOutConfirm = false
+    // Set right before loadEmailPreference() assigns the fetched value to
+    // notifyEmail, so that assignment's own onChange doesn't immediately
+    // PUT the value we just loaded straight back to the server.
+    @State private var suppressNextEmailChange = false
+    @State private var emailSettingsError: String?
 
     var body: some View {
         ZStack {
@@ -69,7 +77,7 @@ struct SettingsView: View {
                         toggleRow(
                             icon: "envelope.fill",
                             title: "Email",
-                            subtitle: auth.session?.email ?? "Always available",
+                            subtitle: emailSettingsError ?? (auth.session?.email ?? "Always available"),
                             isOn: $notifyEmail
                         )
                         Divider().overlay(Color.ltBorder)
@@ -109,9 +117,19 @@ struct SettingsView: View {
                 }
             }
         }
-        .task { await refreshPushStatus() }
+        .task {
+            await refreshPushStatus()
+            await loadEmailPreference()
+        }
         .onChange(of: wantsPush) { _, newValue in
             if newValue { Task { await requestPush() } }
+        }
+        .onChange(of: notifyEmail) { _, newValue in
+            if suppressNextEmailChange {
+                suppressNextEmailChange = false
+                return
+            }
+            Task { await saveEmailPreference(newValue) }
         }
         .confirmationDialog(
             "Sign out of LineTracker?",
@@ -297,6 +315,31 @@ struct SettingsView: View {
     private func openSystemSettings() {
         guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
         UIApplication.shared.open(url)
+    }
+
+    // MARK: - Email preference (backend-synced)
+
+    private func loadEmailPreference() async {
+        do {
+            let settings = try await APIClient.shared.getSettings()
+            emailSettingsError = nil
+            suppressNextEmailChange = true
+            notifyEmail = settings.notifyEmail
+        } catch {
+            // Backend unreachable or not signed in yet — fall back to
+            // whatever's cached locally (the @AppStorage default) rather
+            // than blocking the screen on a network error.
+            emailSettingsError = "Couldn't reach the server — showing your last saved setting"
+        }
+    }
+
+    private func saveEmailPreference(_ value: Bool) async {
+        do {
+            try await APIClient.shared.updateSettings(notifyEmail: value)
+            emailSettingsError = nil
+        } catch {
+            emailSettingsError = "Couldn't save — check your connection"
+        }
     }
 }
 

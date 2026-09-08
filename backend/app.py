@@ -22,7 +22,7 @@ from flask_apscheduler import APScheduler
 from sqlalchemy import inspect, text
 from notifications import send_alert_email
 
-from models import db, Alert
+from models import db, Alert, UserSettings
 from scheduler import poll_alerts
 from auth import verify_google_token, issue_session_token, require_auth
 
@@ -517,6 +517,38 @@ def delete_alert(alert_id):
     return jsonify({"message": f"Alert {alert_id} deleted"})
 
 # UptimeRobot wakes the server up every 5 minutes
+# --- Settings routes ---
+# Lazily-created UserSettings row: a user who's never touched their
+# settings has none, and that's treated as "everything default" (email
+# notifications on) rather than requiring a row to exist for every
+# account up front.
+@app.route("/settings", methods=["GET"])
+@require_auth
+def get_settings():
+    settings = UserSettings.query.filter_by(user_email=request.user_email).first()
+    if not settings:
+        return jsonify({"user_email": request.user_email, "notify_email": True})
+    return jsonify(settings.to_dict())
+
+
+@app.route("/settings", methods=["PUT"])
+@require_auth
+def update_settings():
+    data = request.get_json() or {}
+    if "notify_email" not in data:
+        return jsonify({"error": "Missing required field: notify_email"}), 400
+
+    settings = UserSettings.query.filter_by(user_email=request.user_email).first()
+    if not settings:
+        settings = UserSettings(user_email=request.user_email)
+        db.session.add(settings)
+
+    settings.notify_email = bool(data["notify_email"])
+    db.session.commit()
+
+    return jsonify(settings.to_dict())
+
+
 @app.route("/ping", methods=["GET"])
 def ping():
     return jsonify({"status": "alive"})
@@ -524,7 +556,7 @@ def ping():
 # --- Manual trigger route (for testing the poller on demand) ---
 @app.route("/poll-now", methods=["POST"])
 def poll_now():
-    poll_alerts(app, db, Alert, SHARP_API_KEY, send_email_func=send_alert_email)
+    poll_alerts(app, db, Alert, SHARP_API_KEY, send_email_func=send_alert_email, UserSettings=UserSettings)
     return jsonify({"message": "Polling run complete — check terminal logs"})
 
 
@@ -540,7 +572,7 @@ scheduler.init_app(app)
 
 @scheduler.task("interval", id="poll_alerts_job", minutes=1)
 def scheduled_poll():
-    poll_alerts(app, db, Alert, SHARP_API_KEY, send_email_func=send_alert_email)
+    poll_alerts(app, db, Alert, SHARP_API_KEY, send_email_func=send_alert_email, UserSettings=UserSettings)
 
 
 scheduler.start()

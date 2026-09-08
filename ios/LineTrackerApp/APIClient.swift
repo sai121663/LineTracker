@@ -111,6 +111,32 @@ final class APIClient {
         let data = try await request(path: "/odds", query: ["sport": sport, "market": market], authorized: false)
         return try decoder.decode(OddsResponse.self, from: data)
     }
+
+    // MARK: - Settings
+
+    func getSettings() async throws -> UserSettingsResponse {
+        let data = try await request(path: "/settings")
+        return try decoder.decode(UserSettingsResponse.self, from: data)
+    }
+
+    @discardableResult
+    func updateSettings(notifyEmail: Bool) async throws -> UserSettingsResponse {
+        let body = try encoder.encode(["notify_email": notifyEmail])
+        let data = try await request(path: "/settings", method: "PUT", body: body)
+        return try decoder.decode(UserSettingsResponse.self, from: data)
+    }
+}
+
+/// Mirrors app.py's /settings GET & PUT response — models.py's
+/// UserSettings.to_dict().
+struct UserSettingsResponse: Codable {
+    let userEmail: String
+    let notifyEmail: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case userEmail = "user_email"
+        case notifyEmail = "notify_email"
+    }
 }
 
 // Small bridge so APIClient (a plain class) can read the current token
