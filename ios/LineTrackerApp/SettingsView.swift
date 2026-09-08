@@ -16,6 +16,7 @@ import UserNotifications
 /// verification we haven't built.
 struct SettingsView: View {
     @EnvironmentObject var auth: AuthManager
+    @Environment(\.dismiss) private var dismiss
 
     @AppStorage("lt_notifyEmail") private var notifyEmail = true
     @AppStorage("lt_wantsPush") private var wantsPush = false
@@ -98,6 +99,16 @@ struct SettingsView: View {
         .toolbarBackground(Color.ltBackground, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark")
+                        .foregroundStyle(Color.ltTextPrimary)
+                }
+            }
+        }
         .task { await refreshPushStatus() }
         .onChange(of: wantsPush) { _, newValue in
             if newValue { Task { await requestPush() } }
