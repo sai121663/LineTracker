@@ -160,7 +160,9 @@ struct DashboardView: View {
     private var header: some View {
         HStack(alignment: .top, spacing: 16) {
             Text("Your Dashboard")
-                .font(.system(size: 26, weight: .bold))
+                .font(.system(size: 22, weight: .bold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
                 .foregroundStyle(Color.ltTextPrimary)
 
             Spacer(minLength: 8)
