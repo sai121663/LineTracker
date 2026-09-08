@@ -62,9 +62,9 @@ struct DashboardView: View {
                         .frame(maxWidth: .infinity)
                     } else if alerts.isEmpty {
                         ContentUnavailableView(
-                            "No alerts yet",
+                            "No live alerts",
                             systemImage: "bell.slash",
-                            description: Text("Track a stock's price or a betting line — you'll get an email the moment it crosses your target.")
+                            description: Text("Track a stock's price or a betting line — you'll be notified the moment it crosses your target.")
                         )
                         .foregroundStyle(Color.ltTextPrimary)
                         .frame(maxWidth: .infinity)
@@ -159,7 +159,7 @@ struct DashboardView: View {
     // "+ Stock" / "+ Bet" quick-add buttons on the trailing edge.
     private var header: some View {
         HStack(alignment: .top, spacing: 16) {
-            Text("Your Alerts")
+            Text("Your Dashboard")
                 .font(.system(size: 26, weight: .bold))
                 .foregroundStyle(Color.ltTextPrimary)
 
