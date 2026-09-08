@@ -12,73 +12,71 @@ struct DashboardView: View {
     private var active: [Alert] { alerts.filter { !$0.triggered } }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                Color.ltBackground.ignoresSafeArea()
+        ZStack {
+            Color.ltBackground.ignoresSafeArea()
 
-                Group {
-                    if loading {
-                        ProgressView("Loading alerts…")
-                            .tint(Color.ltAccent)
-                            .foregroundStyle(Color.ltTextSecondary)
-                    } else if let errorMessage {
-                        ContentUnavailableView(
-                            "Couldn't load alerts",
-                            systemImage: "wifi.slash",
-                            description: Text(errorMessage)
-                        )
-                        .foregroundStyle(Color.ltTextPrimary)
-                    } else if alerts.isEmpty {
-                        ContentUnavailableView(
-                            "No alerts yet",
-                            systemImage: "bell.slash",
-                            description: Text("Track a stock's price or a betting line — you'll get an email the moment it crosses your target.")
-                        )
-                        .foregroundStyle(Color.ltTextPrimary)
-                    } else {
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: 14) {
-                                HStack(spacing: 10) {
-                                    Text("ACTIVE")
-                                        .font(.system(size: 13, weight: .semibold))
-                                        .tracking(1.2)
-                                        .foregroundStyle(Color.ltTextSecondary)
-                                    Text("\(active.count)")
-                                        .font(.system(size: 12, weight: .bold, design: .monospaced))
-                                        .foregroundStyle(Color.ltTextPrimary)
-                                        .padding(.horizontal, 9)
-                                        .padding(.vertical, 3)
-                                        .background(Color.ltSurfaceRaised, in: Capsule())
-                                }
+            Group {
+                if loading {
+                    ProgressView("Loading alerts…")
+                        .tint(Color.ltAccent)
+                        .foregroundStyle(Color.ltTextSecondary)
+                } else if let errorMessage {
+                    ContentUnavailableView(
+                        "Couldn't load alerts",
+                        systemImage: "wifi.slash",
+                        description: Text(errorMessage)
+                    )
+                    .foregroundStyle(Color.ltTextPrimary)
+                } else if alerts.isEmpty {
+                    ContentUnavailableView(
+                        "No alerts yet",
+                        systemImage: "bell.slash",
+                        description: Text("Track a stock's price or a betting line — you'll get an email the moment it crosses your target.")
+                    )
+                    .foregroundStyle(Color.ltTextPrimary)
+                } else {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 14) {
+                            HStack(spacing: 10) {
+                                Text("ACTIVE")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .tracking(1.2)
+                                    .foregroundStyle(Color.ltTextSecondary)
+                                Text("\(active.count)")
+                                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(Color.ltTextPrimary)
+                                    .padding(.horizontal, 9)
+                                    .padding(.vertical, 3)
+                                    .background(Color.ltSurfaceRaised, in: Capsule())
+                            }
 
-                                LazyVStack(spacing: 10) {
-                                    ForEach(active) { alert in
-                                        AlertCard(alert: alert, onDelete: { delete(alert) })
-                                    }
+                            LazyVStack(spacing: 10) {
+                                ForEach(active) { alert in
+                                    AlertCard(alert: alert, onDelete: { delete(alert) })
                                 }
                             }
-                            .padding(16)
-                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
+                        .padding(16)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
             }
-            .navigationTitle("Your alerts")
-            .toolbarBackground(Color.ltBackground, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Button("Sign out", role: .destructive) { auth.signOut() }
-                    } label: {
-                        Label(auth.session?.email ?? "", systemImage: "person.crop.circle")
-                    }
-                }
-            }
-            .task { await load() }
-            .refreshable { await load() }
         }
+        .navigationTitle("Your alerts")
+        .toolbarBackground(Color.ltBackground, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button("Sign out", role: .destructive) { auth.signOut() }
+                } label: {
+                    Label(auth.session?.email ?? "", systemImage: "person.crop.circle")
+                }
+            }
+        }
+        .task { await load() }
+        .refreshable { await load() }
     }
 
     private func load() async {
