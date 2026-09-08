@@ -43,58 +43,72 @@ struct DashboardView: View {
         ZStack {
             Color.ltBackground.ignoresSafeArea()
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    header
+            GeometryReader { geo in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        header
 
-                    if loading {
-                        ProgressView("Loading alerts…")
-                            .tint(Color.ltAccent)
-                            .foregroundStyle(Color.ltTextSecondary)
+                        if loading {
+                            ProgressView("Loading alerts…")
+                                .tint(Color.ltAccent)
+                                .foregroundStyle(Color.ltTextSecondary)
+                                .frame(maxWidth: .infinity)
+                        } else if let errorMessage {
+                            ContentUnavailableView(
+                                "Couldn't load alerts",
+                                systemImage: "wifi.slash",
+                                description: Text(errorMessage)
+                            )
+                            .foregroundStyle(Color.ltTextPrimary)
                             .frame(maxWidth: .infinity)
-                    } else if let errorMessage {
-                        ContentUnavailableView(
-                            "Couldn't load alerts",
-                            systemImage: "wifi.slash",
-                            description: Text(errorMessage)
-                        )
-                        .foregroundStyle(Color.ltTextPrimary)
-                        .frame(maxWidth: .infinity)
-                    } else if alerts.isEmpty {
-                        ContentUnavailableView(
-                            "No live alerts",
-                            systemImage: "bell.slash",
-                            description: Text("Track a stock's price or a betting line — you'll be notified the moment it crosses your target.")
-                        )
-                        .foregroundStyle(Color.ltTextPrimary)
-                        .frame(maxWidth: .infinity)
-                    } else {
-                        VStack(alignment: .leading, spacing: 14) {
-                            HStack(spacing: 10) {
-                                Text("ACTIVE")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .tracking(1.2)
-                                    .foregroundStyle(Color.ltTextSecondary)
-                                Text("\(active.count)")
-                                    .font(.system(size: 12, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(Color.ltTextPrimary)
-                                    .padding(.horizontal, 9)
-                                    .padding(.vertical, 3)
-                                    .background(Color.ltSurfaceRaised, in: Capsule())
-                            }
+                        } else if alerts.isEmpty {
+                            // Center the empty state in the space below the
+                            // header, rather than letting it sit right up
+                            // against it -- Spacers here only have room to
+                            // push things apart because the VStack below is
+                            // forced to at least fill the screen (see the
+                            // minHeight frame() below).
+                            Spacer(minLength: 24)
+                            ContentUnavailableView(
+                                "No live alerts",
+                                systemImage: "bell.slash",
+                                description: Text("Track a stock's price or a betting line — you'll be notified the moment it crosses your target.")
+                            )
+                            .foregroundStyle(Color.ltTextPrimary)
+                            .frame(maxWidth: .infinity)
+                            Spacer(minLength: 24)
+                        } else {
+                            VStack(alignment: .leading, spacing: 14) {
+                                HStack(spacing: 10) {
+                                    Text("ACTIVE")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .tracking(1.2)
+                                        .foregroundStyle(Color.ltTextSecondary)
+                                    Text("\(active.count)")
+                                        .font(.system(size: 12, weight: .bold, design: .monospaced))
+                                        .foregroundStyle(Color.ltTextPrimary)
+                                        .padding(.horizontal, 9)
+                                        .padding(.vertical, 3)
+                                        .background(Color.ltSurfaceRaised, in: Capsule())
+                                }
 
-                            LazyVStack(spacing: 10) {
-                                ForEach(active) { alert in
-                                    AlertCard(alert: alert, onDelete: { delete(alert) })
+                                LazyVStack(spacing: 10) {
+                                    ForEach(active) { alert in
+                                        AlertCard(alert: alert, onDelete: { delete(alert) })
+                                    }
                                 }
                             }
                         }
                     }
+                    .frame(
+                        minHeight: (!loading && errorMessage == nil && alerts.isEmpty) ? geo.size.height - 32 : nil,
+                        alignment: .top
+                    )
+                    .padding(16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .padding(16)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .refreshable { await load() }
             }
-            .refreshable { await load() }
         }
         // The title is drawn as ordinary content above (the `header`
         // view), same as StockSearchView's "Track a stock" — not the
