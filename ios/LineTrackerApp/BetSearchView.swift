@@ -343,9 +343,10 @@ struct BetSearchView: View {
                     teamLogo(e.awayLogo)
                     Text(e.awayTeam)
                 }
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(Color.ltTextPrimary)
                 .lineLimit(1)
+                .minimumScaleFactor(0.7)
 
                 Spacer(minLength: 8)
 
