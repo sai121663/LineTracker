@@ -28,14 +28,15 @@ struct OddsEvent: Codable, Identifiable {
         case bookmakers
     }
 
-    /// Best-effort parse of commence_time (ISO8601, sometimes with a "Z").
+    /// Best-effort parse of commence_time. Uses Formatting.parseFlexibleISO
+    /// rather than a bare ISO8601DateFormatter because SharpAPI's
+    /// event_start_time isn't guaranteed to carry a "Z"/offset the way
+    /// ISO8601DateFormatter strictly requires (see that function's doc
+    /// comment) — a naive timestamp here used to make every game's date
+    /// fail to parse and fall back to "Date unknown".
     var commenceDate: Date? {
         guard let commenceTime else { return nil }
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let d = f.date(from: commenceTime) { return d }
-        f.formatOptions = [.withInternetDateTime]
-        return f.date(from: commenceTime)
+        return Formatting.parseFlexibleISO(commenceTime)
     }
 }
 

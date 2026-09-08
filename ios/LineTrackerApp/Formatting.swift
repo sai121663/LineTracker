@@ -95,22 +95,63 @@ enum Formatting {
     }
 
     private static func parseISO(_ iso: String) -> Date? {
+        parseFlexibleISO(iso)
+    }
+
+    /// Tolerant ISO-ish date parser. Third-party APIs (and this backend's
+    /// own naive `datetime.utcnow().isoformat()` timestamps) don't always
+    /// include a "Z"/offset the way `ISO8601DateFormatter` strictly
+    /// requires — JavaScript's `new Date(...)` silently accepts a
+    /// timezone-less string (treating it as local time), but Swift's
+    /// formatter rejects it outright, which is why dates that render fine
+    /// on the web app can come back nil here. This tries, in order:
+    /// exact ISO8601 (with/without fractional seconds), then — if the
+    /// string has no trailing "Z"/offset — the same string with "Z"
+    /// appended (treating it as UTC, matching how this codebase already
+    /// treats other naive backend timestamps), then a couple of manual
+    /// fallback formats for stray non-"T" separators.
+    static func parseFlexibleISO(_ iso: String) -> Date? {
+        let trimmed = iso.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let date = f.date(from: iso) { return date }
+        if let date = f.date(from: trimmed) { return date }
         f.formatOptions = [.withInternetDateTime]
-        return f.date(from: iso)
+        if let date = f.date(from: trimmed) { return date }
+
+        // No "Z" and no explicit +HH:MM/-HH:MM offset after the time
+        // portion → assume UTC, same convention this file already uses
+        // for naive `created_at` values.
+        let hasOffset = trimmed.hasSuffix("Z")
+            || trimmed.range(of: #"[+-]\d{2}:?\d{2}$"#, options: .regularExpression) != nil
+        if !hasOffset {
+            let withZ = trimmed + "Z"
+            f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let date = f.date(from: withZ) { return date }
+            f.formatOptions = [.withInternetDateTime]
+            if let date = f.date(from: withZ) { return date }
+        }
+
+        let manualFormats = [
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSS",
+            "yyyy-MM-dd'T'HH:mm:ss",
+            "yyyy-MM-dd HH:mm:ss.SSSSSS",
+            "yyyy-MM-dd HH:mm:ss",
+            "yyyy-MM-dd",
+        ]
+        let df = DateFormatter()
+        df.locale = Locale(identifier: "en_US_POSIX")
+        df.timeZone = TimeZone(identifier: "UTC")
+        for format in manualFormats {
+            df.dateFormat = format
+            if let date = df.date(from: trimmed) { return date }
+        }
+        return nil
     }
 
     static func relativeDate(_ iso: String?) -> String? {
-        guard let iso else { return nil }
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        let date = f.date(from: iso) ?? {
-            f.formatOptions = [.withInternetDateTime]
-            return f.date(from: iso)
-        }()
-        guard let date else { return nil }
+        guard let iso, let date = parseFlexibleISO(iso) else { return nil }
         let df = DateFormatter()
         df.dateStyle = .medium
         df.timeStyle = .short
