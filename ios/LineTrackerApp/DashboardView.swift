@@ -15,27 +15,32 @@ struct DashboardView: View {
         ZStack {
             Color.ltBackground.ignoresSafeArea()
 
-            Group {
-                if loading {
-                    ProgressView("Loading alerts…")
-                        .tint(Color.ltAccent)
-                        .foregroundStyle(Color.ltTextSecondary)
-                } else if let errorMessage {
-                    ContentUnavailableView(
-                        "Couldn't load alerts",
-                        systemImage: "wifi.slash",
-                        description: Text(errorMessage)
-                    )
-                    .foregroundStyle(Color.ltTextPrimary)
-                } else if alerts.isEmpty {
-                    ContentUnavailableView(
-                        "No alerts yet",
-                        systemImage: "bell.slash",
-                        description: Text("Track a stock's price or a betting line — you'll get an email the moment it crosses your target.")
-                    )
-                    .foregroundStyle(Color.ltTextPrimary)
-                } else {
-                    ScrollView {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    header
+
+                    if loading {
+                        ProgressView("Loading alerts…")
+                            .tint(Color.ltAccent)
+                            .foregroundStyle(Color.ltTextSecondary)
+                            .frame(maxWidth: .infinity)
+                    } else if let errorMessage {
+                        ContentUnavailableView(
+                            "Couldn't load alerts",
+                            systemImage: "wifi.slash",
+                            description: Text(errorMessage)
+                        )
+                        .foregroundStyle(Color.ltTextPrimary)
+                        .frame(maxWidth: .infinity)
+                    } else if alerts.isEmpty {
+                        ContentUnavailableView(
+                            "No alerts yet",
+                            systemImage: "bell.slash",
+                            description: Text("Track a stock's price or a betting line — you'll get an email the moment it crosses your target.")
+                        )
+                        .foregroundStyle(Color.ltTextPrimary)
+                        .frame(maxWidth: .infinity)
+                    } else {
                         VStack(alignment: .leading, spacing: 14) {
                             HStack(spacing: 10) {
                                 Text("ACTIVE")
@@ -56,13 +61,22 @@ struct DashboardView: View {
                                 }
                             }
                         }
-                        .padding(16)
-                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .refreshable { await load() }
         }
-        .navigationTitle("Your alerts")
+        // The title is drawn as ordinary content above (the `header`
+        // view), same as StockSearchView's "Track a stock" — not the
+        // system's automatic large title. A NavigationStack's large
+        // title inside a TabView + toolbarBackground combo like this
+        // one has a well-known rendering glitch where it silently
+        // fails to draw on some appearances ("Your alerts" going
+        // blank); drawing it ourselves sidesteps that entirely.
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color.ltBackground, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
@@ -76,7 +90,12 @@ struct DashboardView: View {
             }
         }
         .task { await load() }
-        .refreshable { await load() }
+    }
+
+    private var header: some View {
+        Text("Your alerts")
+            .font(.system(size: 26, weight: .bold))
+            .foregroundStyle(Color.ltTextPrimary)
     }
 
     private func load() async {
