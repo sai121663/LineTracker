@@ -45,8 +45,23 @@ def _outcome_matches(selection, outcome_name):
     return name.endswith(sel_last_word) or sel.endswith(name_last_word)
 
 
-def get_bet_odds(sharp_api_key, sport, event_id, market, outcome_name, bookmaker):
-    """Fetch current odds for a specific outcome from SharpAPI."""
+def fetch_league_market_rows(sharp_api_key, sport, market):
+    """Fetch EVERY SharpAPI row for a given (sport, market) pair, across
+    all pages, in one shared trip.
+
+    This replaces the old per-alert get_bet_odds(), which re-fetched
+    this exact same league+market data from scratch for every single
+    alert that happened to share it — ten different people all watching
+    the same Lakers moneyline used to mean ten separate identical
+    fetches. Every alert tracking this sport+market now gets checked
+    against this one shared result via extract_odds() below, so the
+    number of SharpAPI calls scales with how many distinct games are
+    being tracked, not how many alerts or users exist.
+
+    Returns None on a hard failure (network error, bad response) so
+    callers can tell "couldn't ask SharpAPI" apart from a legitimate
+    empty [] (asked, nothing came back).
+    """
     league = SPORT_TO_SHARP.get(sport)
     sharp_market = MARKET_TO_SHARP.get(market, "moneyline")
 
@@ -57,17 +72,17 @@ def get_bet_odds(sharp_api_key, sport, event_id, market, outcome_name, bookmaker
     headers = {"X-API-Key": sharp_api_key}
     offset = 0
     limit = 50
-
-    # Tracked so a "not found" result can say exactly where the lookup broke
-    # down instead of a dead-end "could not fetch" — was the event missing
-    # entirely, was it there but under a different bookmaker, or was the
-    # bookmaker right but the outcome name didn't match?
-    found_event = False
-    found_bookmaker = False
-    total_rows_seen = 0
+    rows = []
 
     try:
+        page = 0
         while True:
+            if page > 0:
+                # Stay under SharpAPI's free-tier ~12 requests/minute cap
+                # between pages of this SAME league+market fetch.
+                time.sleep(6)
+            page += 1
+
             url = f"{SHARP_API_BASE}/odds"
             params = {
                 "league": league,
@@ -79,44 +94,60 @@ def get_bet_odds(sharp_api_key, sport, event_id, market, outcome_name, bookmaker
             response = requests.get(url, headers=headers, params=params, timeout=10)
             response.raise_for_status()
             data = response.json()
-            rows = data.get("data", [])
-            total_rows_seen += len(rows)
-
-            for row in rows:
-                if row.get("event_id") != event_id:
-                    continue
-                found_event = True
-                sportsbook_label = (row.get("sportsbook_ref") or {}).get("label") or row.get("sportsbook", "").title()
-                # Case/whitespace-insensitive: the event-search endpoint and this
-                # odds endpoint can format the same sportsbook/team differently
-                # (e.g. "Draftkings" vs "DraftKings"), which an exact string
-                # match would treat as a permanent, silent non-match.
-                if sportsbook_label.strip().casefold() != (bookmaker or "").strip().casefold():
-                    continue
-                found_bookmaker = True
-                if _outcome_matches(row.get("selection"), outcome_name):
-                    return row.get("odds_american")
+            rows.extend(data.get("data", []))
 
             pagination = data.get("pagination", {})
             if not pagination.get("has_more"):
                 break
             offset += limit
 
-        if not found_event:
-            print(f"[poll] SharpAPI has no odds for event_id={event_id!r} in league={league!r} "
-                  f"market={sharp_market!r} ({total_rows_seen} other row(s) checked) — the pre-game line "
-                  f"may be gone (game started/finished) or this event_id no longer matches SharpAPI's listing")
-        elif not found_bookmaker:
-            print(f"[poll] Found event_id={event_id!r} but no row for bookmaker={bookmaker!r} — that "
-                  f"sportsbook may not be listing this game, or its label doesn't match what was stored")
-        else:
-            print(f"[poll] Found event_id={event_id!r} and bookmaker={bookmaker!r} but no row matched "
-                  f"outcome_name={outcome_name!r} — likely a naming/format mismatch")
-        return None
+        return rows
 
     except requests.exceptions.RequestException as e:
-        print(f"[poll] Error fetching SharpAPI odds for event {event_id}: {e}")
+        print(f"[poll] Error fetching SharpAPI odds for league={league!r} market={sharp_market!r}: {e}")
         return None
+
+
+def extract_odds(rows, event_id, outcome_name, bookmaker):
+    """Find one alert's odds inside a rows list already fetched by
+    fetch_league_market_rows(). Same matching logic get_bet_odds() used
+    to do inline, now reusable against a shared fetch instead of
+    triggering a fresh network call per alert.
+
+    Tracked so a "not found" result can say exactly where the lookup
+    broke down instead of a dead-end "could not fetch" — was the event
+    missing entirely, was it there but under a different bookmaker, or
+    was the bookmaker right but the outcome name didn't match?
+    """
+    found_event = False
+    found_bookmaker = False
+
+    for row in rows:
+        if row.get("event_id") != event_id:
+            continue
+        found_event = True
+        sportsbook_label = (row.get("sportsbook_ref") or {}).get("label") or row.get("sportsbook", "").title()
+        # Case/whitespace-insensitive: the event-search endpoint and this
+        # odds endpoint can format the same sportsbook/team differently
+        # (e.g. "Draftkings" vs "DraftKings"), which an exact string
+        # match would treat as a permanent, silent non-match.
+        if sportsbook_label.strip().casefold() != (bookmaker or "").strip().casefold():
+            continue
+        found_bookmaker = True
+        if _outcome_matches(row.get("selection"), outcome_name):
+            return row.get("odds_american")
+
+    if not found_event:
+        print(f"[poll] SharpAPI has no odds for event_id={event_id!r} "
+              f"({len(rows)} other row(s) checked) — the pre-game line "
+              f"may be gone (game started/finished) or this event_id no longer matches SharpAPI's listing")
+    elif not found_bookmaker:
+        print(f"[poll] Found event_id={event_id!r} but no row for bookmaker={bookmaker!r} — that "
+              f"sportsbook may not be listing this game, or its label doesn't match what was stored")
+    else:
+        print(f"[poll] Found event_id={event_id!r} and bookmaker={bookmaker!r} but no row matched "
+              f"outcome_name={outcome_name!r} — likely a naming/format mismatch")
+    return None
 
 def get_stock_price(ticker): 
 
@@ -151,19 +182,30 @@ def poll_alerts(app, db, Alert, sharp_api_key, send_email_func=None):
     """
     Checks all untriggered alerts against live data.
     Call this on a schedule (e.g. every 5 minutes via APScheduler).
+
+    Fetches data in BATCHES, not per-alert: every bet alert sharing the
+    same (sport, market) — e.g. ten different people all watching the
+    same Lakers moneyline — is checked against one shared SharpAPI fetch
+    instead of each alert triggering its own separate call for the exact
+    same underlying data. Same idea for stock alerts sharing a ticker
+    and yfinance. Actual network calls now scale with how many distinct
+    games/stocks are being tracked, not how many alerts or users exist.
     """
     with app.app_context():
         alerts = Alert.query.filter_by(triggered=False).all()
         print(f"[poll] Checking {len(alerts)} active alert(s) at {datetime.utcnow().isoformat()}")
 
+        # Delete bet alerts for games that started 5+ hours ago *before*
+        # attempting any fetch. This used to run after the fetch (and used
+        # a lowercase "bet" that never matched the real "Bet 🎟️" value,
+        # so it never ran at all) — an alert whose odds can never be
+        # fetched (the actual stuck case) hit "continue" on the fetch
+        # failure below and never reached it, so it stayed active
+        # forever, failing every single poll with no way out. Pulled into
+        # its own pass so the alerts left over can be grouped for
+        # batching next.
+        live_alerts = []
         for alert in alerts:
-            # Delete bet alerts for games that started 5+ hours ago *before*
-            # attempting a fetch. This used to run after the fetch (and used
-            # a lowercase "bet" that never matched the real "Bet 🎟️" value,
-            # so it never ran at all) — an alert whose odds can never be
-            # fetched (the actual stuck case) hit "continue" on the fetch
-            # failure below and never reached it, so it stayed active
-            # forever, failing every single poll with no way out.
             if alert.alert_type == "Bet 🎟️" and alert.commence_time:
                 commence = datetime.fromisoformat(alert.commence_time.replace("Z", "+00:00"))
                 hours_since_start = (datetime.now(timezone.utc) - commence).total_seconds() / 3600
@@ -171,22 +213,38 @@ def poll_alerts(app, db, Alert, sharp_api_key, send_email_func=None):
                     print(f"[poll] Alert {alert.id} game likely over, deleting")
                     db.session.delete(alert)
                     continue
+            live_alerts.append(alert)
 
+        # --- Batch fetch: once per unique (sport, market) for bets, once
+        # per unique ticker for stocks — see this function's docstring.
+        bet_keys = sorted({
+            (a.sport, a.market) for a in live_alerts if a.alert_type == "Bet 🎟️"
+        })
+        odds_by_key = {}
+        for i, (sport, market) in enumerate(bet_keys):
+            if i > 0:
+                # Stay under SharpAPI's free-tier ~12 requests/minute cap
+                # between different sport+market groups.
+                time.sleep(6)
+            odds_by_key[(sport, market)] = fetch_league_market_rows(sharp_api_key, sport, market)
+
+        tickers = sorted({
+            a.ticker for a in live_alerts if a.alert_type == "Stock 🌱" and a.ticker
+        })
+        price_by_ticker = {ticker: get_stock_price(ticker) for ticker in tickers}
+
+        # --- Check every alert against its already-fetched snapshot — no
+        # network calls happen in this loop at all anymore.
+        for alert in live_alerts:
             current_value = None
 
             if alert.alert_type == "Stock 🌱":
-                current_value = get_stock_price(alert.ticker)
+                current_value = price_by_ticker.get(alert.ticker)
 
             elif alert.alert_type == "Bet 🎟️":
-                current_value = get_bet_odds(
-                    sharp_api_key,
-                    alert.sport,
-                    alert.event_id,
-                    alert.market,
-                    alert.outcome_name,
-                    alert.bookmaker,
-                )
-                time.sleep(6)
+                rows = odds_by_key.get((alert.sport, alert.market))
+                if rows is not None:
+                    current_value = extract_odds(rows, alert.event_id, alert.outcome_name, alert.bookmaker)
 
             if current_value is None:
                 print(f"[poll] Could not fetch current value for alert {alert.id}, skipping")
