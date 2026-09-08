@@ -208,6 +208,7 @@ private struct AlertCard: View {
                         Text(alert.alertType)
                             .font(.system(size: 11, weight: .semibold, design: .monospaced))
                             .tracking(0.6)
+                            .textCase(.uppercase)
                             .foregroundStyle(Color(hex: 0x5EA8FF))
 
                         if isStock, let live = alert.liveValue {
