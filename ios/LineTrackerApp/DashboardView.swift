@@ -120,7 +120,7 @@ struct DashboardView: View {
                             .foregroundStyle(Color.ltTextPrimary)
                             .overlay(alignment: .topTrailing) {
                                 if unseenTriggeredCount > 0 {
-                                    Text("\(min(unseenTriggeredCount, 9))\(unseenTriggeredCount > 9 ? "+" : "")")
+                                    Text("\(min(unseenTriggeredCount, 10))\(unseenTriggeredCount > 10 ? "+" : "")")
                                         .font(.system(size: 9, weight: .bold))
                                         .foregroundStyle(.white)
                                         .padding(3)
