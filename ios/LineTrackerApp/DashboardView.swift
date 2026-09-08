@@ -8,6 +8,7 @@ struct DashboardView: View {
     @State private var alerts: [Alert] = []
     @State private var loading = true
     @State private var errorMessage: String?
+    @State private var showSettings = false
 
     private var active: [Alert] { alerts.filter { !$0.triggered } }
 
@@ -82,12 +83,16 @@ struct DashboardView: View {
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button("Sign out", role: .destructive) { auth.signOut() }
+                Button {
+                    showSettings = true
                 } label: {
-                    Label(auth.session?.email ?? "", systemImage: "person.crop.circle")
+                    Image(systemName: "gearshape")
+                        .foregroundStyle(Color.ltTextPrimary)
                 }
             }
+        }
+        .sheet(isPresented: $showSettings) {
+            NavigationStack { SettingsView() }
         }
         .task { await load() }
     }
