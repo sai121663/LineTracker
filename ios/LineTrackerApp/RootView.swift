@@ -25,7 +25,7 @@ struct MainTabView: View {
                     onAddBet: { selection = 2 }
                 )
             }
-                .tabItem { Label("Alerts", systemImage: "bell") }
+                .tabItem { Label("Dashboard", systemImage: "house.fill") }
                 .tag(0)
 
             NavigationStack { StockSearchView(onSaved: { selection = 0 }) }
