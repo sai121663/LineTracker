@@ -561,6 +561,15 @@ def poll_now():
 
 
 # --- Scheduler setup ---
+# This starts the moment app.py is imported, so it starts once per
+# process that imports it. The Procfile deliberately runs Gunicorn with
+# --workers 1 to keep it at exactly one copy — going to more than one
+# worker without first moving this into its own separate process would
+# mean each worker running its own independent copy of this clock, i.e.
+# duplicate SharpAPI/yfinance calls and duplicate trigger emails every
+# minute. Don't raise the worker count in Procfile without splitting
+# this out first (a Render background worker, run separately from the
+# web service).
 class SchedulerConfig:
     SCHEDULER_API_ENABLED = False
 
