@@ -21,15 +21,21 @@ struct DashboardView: View {
     @AppStorage("lt_lastBellCheck") private var lastBellCheckInterval: Double = 0
     @State private var recentTriggered: [Alert] = []
     @State private var showBell = false
+    // What the sheet actually displays -- a snapshot of the alerts that
+    // were still unseen at the moment the bell was tapped, so reopening
+    // the bell later doesn't show the same already-seen alert again.
+    @State private var sheetAlerts: [Alert] = []
 
     private var lastBellCheck: Date { Date(timeIntervalSince1970: lastBellCheckInterval) }
 
-    private var unseenTriggeredCount: Int {
+    private func triggeredSince(_ cutoff: Date) -> [Alert] {
         recentTriggered.filter { alert in
             guard let iso = alert.triggeredAt, let date = Formatting.parseFlexibleISO(iso) else { return false }
-            return date > lastBellCheck
-        }.count
+            return date > cutoff
+        }
     }
+
+    private var unseenTriggeredCount: Int { triggeredSince(lastBellCheck).count }
 
     private var active: [Alert] { alerts.filter { !$0.triggered } }
 
@@ -106,8 +112,9 @@ struct DashboardView: View {
             if wantsPush {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        showBell = true
+                        sheetAlerts = triggeredSince(lastBellCheck)
                         lastBellCheckInterval = Date().timeIntervalSince1970
+                        showBell = true
                     } label: {
                         Image(systemName: unseenTriggeredCount > 0 ? "bell.badge.fill" : "bell")
                             .foregroundStyle(Color.ltTextPrimary)
@@ -137,7 +144,7 @@ struct DashboardView: View {
             NavigationStack { SettingsView() }
         }
         .sheet(isPresented: $showBell) {
-            NavigationStack { RecentAlertsView(alerts: recentTriggered) }
+            NavigationStack { RecentAlertsView(alerts: sheetAlerts) }
         }
         .task {
             await load()
