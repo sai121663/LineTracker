@@ -136,8 +136,17 @@ enum Formatting {
         let manualFormats = [
             "yyyy-MM-dd'T'HH:mm:ss.SSSSSS",
             "yyyy-MM-dd'T'HH:mm:ss",
+            // SharpAPI's event_start_time omits seconds entirely (e.g.
+            // "2026-10-20T19:00Z") — ISO8601DateFormatter requires seconds
+            // even with .withInternetDateTime, so it rejects this outright
+            // despite the trailing "Z". This is the real-world case that
+            // was actually causing "Date unknown".
+            "yyyy-MM-dd'T'HH:mm'Z'",
+            "yyyy-MM-dd'T'HH:mmZZZZZ",
+            "yyyy-MM-dd'T'HH:mm",
             "yyyy-MM-dd HH:mm:ss.SSSSSS",
             "yyyy-MM-dd HH:mm:ss",
+            "yyyy-MM-dd HH:mm",
             "yyyy-MM-dd",
         ]
         let df = DateFormatter()

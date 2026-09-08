@@ -281,9 +281,7 @@ struct BetSearchView: View {
         let fmt = DateFormatter()
         fmt.setLocalizedDateFormatFromTemplate("EEEEMMMMd")
         for e in events {
-            // TEMP DEBUG: show the raw commence_time string when parsing
-            // fails, so we can see the exact format the backend is sending.
-            let label = e.commenceDate.map { fmt.string(from: $0) } ?? "Date unknown (raw: \(e.commenceTime ?? "nil"))"
+            let label = e.commenceDate.map { fmt.string(from: $0) } ?? "Date unknown"
             if buckets[label] == nil {
                 buckets[label] = []
                 order.append(label)
