@@ -489,11 +489,33 @@ struct StockSearchView: View {
                 commenceTime: nil
             ))
             saving = false
+            resetToDefault()
             onSaved()
         } catch {
             saveError = (error as? APIClient.APIError)?.errorDescription ?? "Could not save the alert. Try again."
             saving = false
         }
+    }
+
+    /// Puts the page back to its just-opened state — empty search, no
+    /// result card — once an alert has been saved, instead of leaving
+    /// the last searched stock sitting there the next time this tab
+    /// is opened (SwiftUI keeps the tab's view alive across switches,
+    /// so nothing does this for free).
+    private func resetToDefault() {
+        query = ""
+        suggestions = []
+        showDropdown = false
+        suggestionTask?.cancel()
+
+        stock = nil
+        companyName = nil
+        searchedTicker = ""
+        searchError = nil
+
+        targetValue = 0
+        priceInput = ""
+        saveError = nil
     }
 }
 
