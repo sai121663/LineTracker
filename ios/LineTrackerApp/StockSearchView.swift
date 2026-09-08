@@ -14,7 +14,7 @@ private struct StockSuggestion: Codable, Identifiable {
 /// slider) and the thumb — instead of a plain Slider's built-in tint,
 /// which fills the whole track from the minimum. Mirrors StockSearch.jsx's
 /// hand-built CSS gradient background on its <input type="range">.
-private struct GradientSlider: View {
+struct GradientSlider: View {
     @Binding var value: Double
     let range: ClosedRange<Double>
     let current: Double

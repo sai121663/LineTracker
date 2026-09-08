@@ -119,7 +119,7 @@ struct DashboardView: View {
 
 /// Same lookup Dashboard.jsx's BOOKMAKER_DOMAINS uses, so the same
 /// bookmakers resolve to the same logos on both platforms.
-private let bookmakerDomains: [String: String] = [
+let bookmakerDomains: [String: String] = [
     "Draftkings": "draftkings.com",
     "FanDuel": "fanduelracing.com",
     "BetMGM": "betmgm.com",
