@@ -63,13 +63,44 @@ private struct RecentAlertRow: View {
         return "Crossed \(alert.direction == "above" ? "above" : "below") \(target)"
     }
 
+    /// Same lookup as AlertCard's leadingLogoURL (DashboardView.swift) --
+    /// the ticker's logo via Logokit for a stock, the outcome's own team
+    /// crest for a bet.
+    private var leadingLogoURL: URL? {
+        if isStock, let ticker = alert.ticker {
+            return URL(string: "https://img.logo.dev/ticker/\(ticker)?token=\(Config.logoDevToken)")
+        }
+        guard let home = alert.homeTeam else { return nil }
+        let logo = alert.outcomeName == home ? alert.homeLogo : alert.awayLogo
+        return logo.flatMap(URL.init(string:))
+    }
+
+    private var fallbackIcon: some View {
+        Image(systemName: isStock ? "chart.line.uptrend.xyaxis" : "sportscourt.fill")
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundStyle(Color.ltTextPrimary)
+            .frame(width: 30, height: 30)
+            .background(Color.ltSurface, in: RoundedRectangle(cornerRadius: 8))
+    }
+
+    @ViewBuilder
+    private var leadingIcon: some View {
+        if let leadingLogoURL {
+            RemoteImage(url: leadingLogoURL) { image in
+                image.resizable().scaledToFit()
+            } fallback: {
+                fallbackIcon
+            }
+            .frame(width: 30, height: 30)
+            .clipShape(Circle())
+        } else {
+            fallbackIcon
+        }
+    }
+
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: isStock ? "chart.line.uptrend.xyaxis" : "sportscourt.fill")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Color.ltTextPrimary)
-                .frame(width: 30, height: 30)
-                .background(Color.ltSurface, in: RoundedRectangle(cornerRadius: 8))
+            leadingIcon
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
