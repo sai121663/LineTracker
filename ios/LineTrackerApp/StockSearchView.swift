@@ -9,6 +9,64 @@ private struct StockSuggestion: Codable, Identifiable {
     var id: String { symbol }
 }
 
+/// A price slider whose filled track segment runs only between the
+/// current price (always the midpoint of `range`, same as the web's
+/// slider) and the thumb — instead of a plain Slider's built-in tint,
+/// which fills the whole track from the minimum. Mirrors StockSearch.jsx's
+/// hand-built CSS gradient background on its <input type="range">.
+private struct GradientSlider: View {
+    @Binding var value: Double
+    let range: ClosedRange<Double>
+    let current: Double
+
+    private var color: Color {
+        value >= current ? Color.ltSuccess : Color.ltDanger
+    }
+
+    var body: some View {
+        GeometryReader { geo in
+            let width = geo.size.width
+            let currentPct = percent(current, in: range)
+            let targetPct = percent(value, in: range)
+            let leftPct = min(currentPct, targetPct)
+            let rightPct = max(currentPct, targetPct)
+            let thumbDiameter: CGFloat = 18
+
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Color.ltBorder)
+                    .frame(height: 6)
+
+                Capsule()
+                    .fill(color)
+                    .frame(width: max(0, (rightPct - leftPct) * width), height: 6)
+                    .offset(x: leftPct * width)
+
+                Circle()
+                    .fill(Color.white)
+                    .overlay(Circle().stroke(Color.ltBorderBright, lineWidth: 2))
+                    .frame(width: thumbDiameter, height: thumbDiameter)
+                    .offset(x: targetPct * width - thumbDiameter / 2)
+            }
+            .frame(maxHeight: .infinity, alignment: .center)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { drag in
+                        let pct = min(max(drag.location.x / width, 0), 1)
+                        value = range.lowerBound + pct * (range.upperBound - range.lowerBound)
+                    }
+            )
+        }
+        .frame(height: 24)
+    }
+
+    private func percent(_ v: Double, in range: ClosedRange<Double>) -> Double {
+        guard range.upperBound > range.lowerBound else { return 0 }
+        return min(max((v - range.lowerBound) / (range.upperBound - range.lowerBound), 0), 1)
+    }
+}
+
 /// Port of StockSearch.jsx, styled to match the web app's dark theme
 /// instead of a plain iOS Form: the Company/Ticker toggle, live
 /// autocomplete dropdown (via FMP), dark result card, and the
@@ -285,11 +343,14 @@ struct StockSearchView: View {
             }
 
             VStack(spacing: 8) {
-                Slider(value: $targetValue, in: (stock.price * 0.5)...(stock.price * 1.5))
-                    .tint(sliderColor)
-                    .onChange(of: targetValue) { _, newValue in
-                        priceInput = String(format: "%.2f", newValue)
-                    }
+                GradientSlider(
+                    value: $targetValue,
+                    range: (stock.price * 0.5)...(stock.price * 1.5),
+                    current: stock.price
+                )
+                .onChange(of: targetValue) { _, newValue in
+                    priceInput = String(format: "%.2f", newValue)
+                }
                 HStack {
                     Text(Formatting.dollars(stock.price * 0.5))
                         .foregroundStyle(Color.ltTextTertiary)
