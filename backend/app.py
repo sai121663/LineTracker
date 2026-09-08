@@ -482,12 +482,26 @@ def create_alert():
 @app.route("/alerts", methods=["GET"])
 @require_auth
 def list_alerts():
-    alerts = (
-        Alert.query
-        .filter(db.func.lower(Alert.user_email) == request.user_email, Alert.triggered == False)
-        .order_by(Alert.created_at.desc())
-        .all()
-    )
+    # status=active (default): the still-waiting alerts, same as always.
+    # status=triggered: the bell icon's feed -- alerts that have already
+    # fired, newest first, capped at 20 so it stays "recent" instead of
+    # becoming a full history.
+    status = request.args.get("status", "active")
+    base = Alert.query.filter(db.func.lower(Alert.user_email) == request.user_email)
+
+    if status == "triggered":
+        alerts = (
+            base.filter(Alert.triggered == True)
+            .order_by(Alert.triggered_at.desc())
+            .limit(20)
+            .all()
+        )
+    else:
+        alerts = (
+            base.filter(Alert.triggered == False)
+            .order_by(Alert.created_at.desc())
+            .all()
+        )
     return jsonify([a.to_dict() for a in alerts])
 
 

@@ -90,6 +90,14 @@ final class APIClient {
         return try decoder.decode([Alert].self, from: data)
     }
 
+    /// The bell icon's feed: alerts that have already fired, newest
+    /// first (backend caps this at 20 -- see list_alerts' status=triggered
+    /// branch in app.py).
+    func getRecentTriggeredAlerts() async throws -> [Alert] {
+        let data = try await request(path: "/alerts", query: ["status": "triggered"])
+        return try decoder.decode([Alert].self, from: data)
+    }
+
     func createAlert(_ payload: NewAlertRequest) async throws -> Alert {
         let body = try encoder.encode(payload)
         let data = try await request(path: "/alerts", method: "POST", body: body)

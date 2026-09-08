@@ -1,6 +1,16 @@
 import Foundation
 
 enum Formatting {
+    /// "2h ago" / "3d ago" style relative label for the bell icon's
+    /// triggered_at timestamps -- separate from relativeDate(), which
+    /// is about an upcoming game's start time, not a past event.
+    static func timeAgo(_ iso: String?) -> String {
+        guard let iso, let date = parseFlexibleISO(iso) else { return "" }
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated
+        return formatter.localizedString(for: date, relativeTo: Date())
+    }
+
     /// American odds display: "+150" / "-110" / "—" for nil.
     static func odds(_ price: Double?) -> String {
         guard let price else { return "—" }

@@ -12,6 +12,25 @@ struct DashboardView: View {
     @State private var errorMessage: String?
     @State private var showSettings = false
 
+    // Bell icon: mirrors what a push notification would have told you,
+    // without needing the Apple Developer Program setup push needs. Only
+    // shown when the user has actually turned Push on in Settings (same
+    // @AppStorage key SettingsView writes to) -- if they don't want to be
+    // notified, there's no reason to add a second inbox for it.
+    @AppStorage("lt_wantsPush") private var wantsPush = false
+    @AppStorage("lt_lastBellCheck") private var lastBellCheckInterval: Double = 0
+    @State private var recentTriggered: [Alert] = []
+    @State private var showBell = false
+
+    private var lastBellCheck: Date { Date(timeIntervalSince1970: lastBellCheckInterval) }
+
+    private var unseenTriggeredCount: Int {
+        recentTriggered.filter { alert in
+            guard let iso = alert.triggeredAt, let date = Formatting.parseFlexibleISO(iso) else { return false }
+            return date > lastBellCheck
+        }.count
+    }
+
     private var active: [Alert] { alerts.filter { !$0.triggered } }
 
     var body: some View {
@@ -84,6 +103,27 @@ struct DashboardView: View {
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
+            if wantsPush {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showBell = true
+                        lastBellCheckInterval = Date().timeIntervalSince1970
+                    } label: {
+                        Image(systemName: unseenTriggeredCount > 0 ? "bell.badge.fill" : "bell")
+                            .foregroundStyle(Color.ltTextPrimary)
+                            .overlay(alignment: .topTrailing) {
+                                if unseenTriggeredCount > 0 {
+                                    Text("\(min(unseenTriggeredCount, 9))\(unseenTriggeredCount > 9 ? "+" : "")")
+                                        .font(.system(size: 9, weight: .bold))
+                                        .foregroundStyle(.white)
+                                        .padding(3)
+                                        .background(Color.ltDanger, in: Circle())
+                                        .offset(x: 9, y: -8)
+                                }
+                            }
+                    }
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     showSettings = true
@@ -96,7 +136,16 @@ struct DashboardView: View {
         .sheet(isPresented: $showSettings) {
             NavigationStack { SettingsView() }
         }
-        .task { await load() }
+        .sheet(isPresented: $showBell) {
+            NavigationStack { RecentAlertsView(alerts: recentTriggered) }
+        }
+        .task {
+            await load()
+            if wantsPush { await loadRecentTriggered() }
+        }
+        .onChange(of: wantsPush) { _, isOn in
+            if isOn { Task { await loadRecentTriggered() } }
+        }
     }
 
     // Port of Dashboard.jsx's .dashboard-head: title on the leading edge,
@@ -132,6 +181,10 @@ struct DashboardView: View {
             errorMessage = "Could not reach the backend. Is it running?"
         }
         loading = false
+    }
+
+    private func loadRecentTriggered() async {
+        recentTriggered = (try? await APIClient.shared.getRecentTriggeredAlerts()) ?? recentTriggered
     }
 
     private func delete(_ alert: Alert) {
