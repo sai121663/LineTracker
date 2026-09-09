@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route, NavLink, Link } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import StockSearch from "./pages/StockSearch";
 import BetSearch from "./pages/BetSearch";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 import SignIn from "./SignIn";
 import "./App.css";
 
@@ -46,51 +48,64 @@ function App() {
 
   return (
     <BrowserRouter>
-      {!userEmail && <SignIn onAuth={handleAuth} />}
+      <Routes>
+        {/* Reachable whether or not you're signed in -- App Store review,
+            and anyone else checking these before creating an account,
+            can't be expected to sign in first. */}
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<TermsOfService />} />
 
-      {userEmail && (
-        <div className="app-shell">
-          <header className="app-header">
-            <div className="app-header-inner">
-              <Link to="/" className="logo-link">
-                LINE<span className="logo-accent">TRACKER</span>
-              </Link>
+        <Route
+          path="/*"
+          element={
+            !userEmail ? (
+              <SignIn onAuth={handleAuth} />
+            ) : (
+              <div className="app-shell">
+                <header className="app-header">
+                  <div className="app-header-inner">
+                    <Link to="/" className="logo-link">
+                      LINE<span className="logo-accent">TRACKER</span>
+                    </Link>
 
-              <nav className="main-nav">
-                <NavLink
-                  to="/stocks"
-                  className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
-                >
-                  Stocks 🌱
-                </NavLink>
-                <NavLink
-                  to="/bets"
-                  className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
-                >
-                  Bets 🎟️
-                </NavLink>
-                <button
-                  className="nav-link"
-                  onClick={handleSignOut}
-                  style={{ cursor: "pointer", border: "none", background: "transparent" }}
-                >
-                  {userEmail} ✕
-                </button>
-              </nav>
-            </div>
-          </header>
+                    <nav className="main-nav">
+                      <NavLink
+                        to="/stocks"
+                        className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
+                      >
+                        Stocks 🌱
+                      </NavLink>
+                      <NavLink
+                        to="/bets"
+                        className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
+                      >
+                        Bets 🎟️
+                      </NavLink>
+                      <button
+                        className="nav-link"
+                        onClick={handleSignOut}
+                        style={{ cursor: "pointer", border: "none", background: "transparent" }}
+                      >
+                        {userEmail} ✕
+                      </button>
+                    </nav>
+                  </div>
+                </header>
 
-          <main className="app-main">
-            {sessionLoaded && (
-              <Routes>
-                <Route path="/" element={<Dashboard userEmail={userEmail} />} />
-                <Route path="/stocks" element={<StockSearch userEmail={userEmail} />} />
-                <Route path="/bets" element={<BetSearch userEmail={userEmail} />} />
-              </Routes>
-            )}
-          </main>
-        </div>
-      )}
+                <main className="app-main">
+                  {sessionLoaded && (
+                    <Routes>
+                      <Route path="/" element={<Dashboard userEmail={userEmail} />} />
+                      <Route path="/stocks" element={<StockSearch userEmail={userEmail} />} />
+                      <Route path="/bets" element={<BetSearch userEmail={userEmail} />} />
+                    </Routes>
+                  )}
+                </main>
+              </div>
+            )
+          }
+        />
+      </Routes>
     </BrowserRouter>
   );
 }
