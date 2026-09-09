@@ -50,6 +50,15 @@ final class AuthManager: ObservableObject {
     func signOut() {
         session = nil
         Self.deleteFromKeychain(service: service, account: account)
+        // lt_wantsPush and lt_lastBellCheck are plain UserDefaults keys
+        // (not scoped to an account), so without this a second account
+        // signing in on the same device would inherit whatever the
+        // previous account had set -- including a "last checked" bell
+        // timestamp that could hide alerts the new account never
+        // actually saw. Resetting them here means every fresh sign-in
+        // starts from a clean slate, same as a first-ever install.
+        UserDefaults.standard.removeObject(forKey: "lt_wantsPush")
+        UserDefaults.standard.removeObject(forKey: "lt_lastBellCheck")
     }
 
     // MARK: - Keychain plumbing

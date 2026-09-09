@@ -107,7 +107,10 @@ struct DashboardView: View {
                     .padding(16)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .refreshable { await load() }
+                .refreshable {
+                    await load()
+                    if wantsPush { await loadRecentTriggered() }
+                }
             }
         }
         // The title is drawn as ordinary content above (the `header`

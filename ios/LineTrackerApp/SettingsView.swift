@@ -5,15 +5,16 @@ import UserNotifications
 /// was no persistent screen for this anywhere (web included), and Sign
 /// Out lived inside a small toolbar menu on the Dashboard. This is a
 /// first pass meant to be tweaked: Email is the channel the backend
-/// already sends (see notifications.py), and its toggle here is a
-/// client-side preference only for now — the backend doesn't check it
-/// yet, so turning it off won't stop emails from arriving until that's
-/// wired up. Push asks for the real iOS permission and reflects the
-/// real system status, but isn't wired to the backend either (no
-/// device-token endpoint exists yet — see poll_alerts' send_email_func
-/// pattern for where a send_push_func would plug in). Text is a UI
-/// placeholder only — SMS needs a provider (e.g. Twilio) and phone
-/// verification we haven't built.
+/// already sends (see notifications.py) -- the toggle here round-trips
+/// to GET/PUT /settings, and scheduler.py's poll loop actually checks
+/// notify_email before sending, so turning it off really does stop
+/// emails. Push asks for the real iOS permission and reflects the real
+/// system status, but isn't wired to the backend either (no device-
+/// token endpoint exists yet — see poll_alerts' send_email_func pattern
+/// for where a send_push_func would plug in) -- it only gates the bell
+/// icon feed on the Dashboard for now, not a real push notification.
+/// Text is a UI placeholder only — SMS needs a provider (e.g. Twilio)
+/// and phone verification we haven't built.
 struct SettingsView: View {
     @EnvironmentObject var auth: AuthManager
     @Environment(\.dismiss) private var dismiss
