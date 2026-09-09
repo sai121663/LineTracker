@@ -39,6 +39,26 @@ app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
 )
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
+# Supabase's connection pooler silently closes a connection that's sat
+# idle too long. SQLAlchemy's default pool doesn't know that and hands
+# the now-dead connection straight back out on the next request, which is
+# what was surfacing as
+#   sqlalchemy.exc.OperationalError: (psycopg2.OperationalError)
+#   SSL SYSCALL error: EOF detected
+# pool_pre_ping makes it run a cheap "is this connection actually still
+# alive?" check before reusing one, transparently reconnecting if not.
+# pool_recycle proactively retires a connection after 5 minutes regardless
+# (comfortably under Supabase's own idle-close window), so we replace
+# connections on our own schedule instead of finding out the hard way.
+# This matters more now than it used to -- keeping the backend alive 24/7
+# (to dodge Render's free-tier spin-down) means the worker process, and
+# the connections it opened, now live far longer uninterrupted than they
+# did when Render was restarting the process on every wake-up.
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_pre_ping": True,
+    "pool_recycle": 300,
+}
+
 db.init_app(app)
 
 with app.app_context():
