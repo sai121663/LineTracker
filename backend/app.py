@@ -297,6 +297,21 @@ def get_odds():
         if row.get("away") and not events_map[event_key]["away_team"].count(" ") > 1:
             events_map[event_key]["away_team"] = row["away"]["name"]
 
+        # Backfill the event's logo from ANY row that has one, not just
+        # whichever row happened to arrive first for this event. home_logo/
+        # away_logo were previously only ever set once, at the moment the
+        # event was first created above -- so if that first row came from a
+        # sportsbook whose rows don't carry a nested "home"/"away" object
+        # (only some books' rows do), the event was permanently stuck with
+        # blank logos even though a later row for the exact same game did
+        # have them. This is what was showing as missing team logos on the
+        # Dashboard for some games (reported: NFL) -- it depended on which
+        # bookmaker's row SharpAPI happened to return first, not the sport.
+        if not events_map[event_key].get("home_logo") and (row.get("home") or {}).get("logo"):
+            events_map[event_key]["home_logo"] = row["home"]["logo"]
+        if not events_map[event_key].get("away_logo") and (row.get("away") or {}).get("logo"):
+            events_map[event_key]["away_logo"] = row["away"]["logo"]
+
         # Use full name from home/away objects if available, otherwise use home_team field
         if not events_map[event_key]["home_team"] and row.get("home"):
             events_map[event_key]["home_team"] = row["home"]["name"]
