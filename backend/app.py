@@ -99,6 +99,39 @@ SPORT_TO_SHARP = {
     "soccer_mls": "usa_-_major_league_soccer",
 }
 
+# SharpAPI's own data simply doesn't include a team logo for NFL games --
+# confirmed by hitting /odds directly: every NFL row comes back with
+# logo == "" (MLB/NBA/etc. rows come back with a real
+# cdn.sharpapi.io URL in the same field, so this isn't a bug in how we
+# read their response, their NFL data just doesn't have one). ESPN's
+# team-logo CDN is public, unauthenticated, and stable, so it's used as a
+# fallback specifically for NFL rather than leaving the card with no logo
+# at all. Keyed by the exact full team names SharpAPI/our own name-
+# normalization above already produce.
+NFL_ESPN_ABBR = {
+    "arizona cardinals": "ari", "atlanta falcons": "atl", "baltimore ravens": "bal",
+    "buffalo bills": "buf", "carolina panthers": "car", "chicago bears": "chi",
+    "cincinnati bengals": "cin", "cleveland browns": "cle", "dallas cowboys": "dal",
+    "denver broncos": "den", "detroit lions": "det", "green bay packers": "gb",
+    "houston texans": "hou", "indianapolis colts": "ind", "jacksonville jaguars": "jax",
+    "kansas city chiefs": "kc", "las vegas raiders": "lv", "los angeles chargers": "lac",
+    "los angeles rams": "lar", "miami dolphins": "mia", "minnesota vikings": "min",
+    "new england patriots": "ne", "new orleans saints": "no", "new york giants": "nyg",
+    "new york jets": "nyj", "philadelphia eagles": "phi", "pittsburgh steelers": "pit",
+    "san francisco 49ers": "sf", "seattle seahawks": "sea", "tampa bay buccaneers": "tb",
+    "tennessee titans": "ten", "washington commanders": "wsh",
+}
+
+
+def team_logo_fallback(sport, team_name):
+    """A logo URL to use when SharpAPI didn't give us one for this team,
+    or "" if we don't have a fallback for this sport/team. Only NFL needs
+    this right now -- see NFL_ESPN_ABBR above."""
+    if sport != "americanfootball_nfl":
+        return ""
+    abbr = NFL_ESPN_ABBR.get((team_name or "").strip().casefold())
+    return f"https://a.espncdn.com/i/teamlogos/nfl/500/{abbr}.png" if abbr else ""
+
 
 @app.route("/")
 def home():
@@ -419,11 +452,19 @@ def get_odds():
     # Convert to list format matching existing frontend expectations
     events = []
     for event in events_map.values():
+        home_logo = event.get("home_logo") or team_logo_fallback(event["sport"], event["home_team"])
+        away_logo = event.get("away_logo") or team_logo_fallback(event["sport"], event["away_team"])
+
         bookmakers = []
         for bm in event["bookmakers"].values():
+            markets = list(bm["markets"].values())
+            for mkt in markets:
+                for outcome in mkt["outcomes"]:
+                    if not outcome.get("logo"):
+                        outcome["logo"] = team_logo_fallback(event["sport"], outcome["name"])
             bookmakers.append({
                 "title": bm["title"],
-                "markets": list(bm["markets"].values()),
+                "markets": markets,
             })
         events.append({
             "id": event["id"],
@@ -431,8 +472,8 @@ def get_odds():
             "commence_time": event["commence_time"],
             "home_team": event["home_team"],
             "away_team": event["away_team"],
-            "home_logo": event.get("home_logo", ""),
-            "away_logo": event.get("away_logo", ""),
+            "home_logo": home_logo,
+            "away_logo": away_logo,
             "bookmakers": bookmakers,
         })
 
