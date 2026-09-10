@@ -22,7 +22,13 @@ struct MainTabView: View {
             NavigationStack {
                 DashboardView(
                     onAddStock: { selection = 1 },
-                    onAddBet: { selection = 2 }
+                    onAddBet: { selection = 2 },
+                    // A cold Render instance means the Dashboard's very
+                    // first alerts fetch fails -- rather than leave you
+                    // stuck on a dead "Couldn't load alerts" screen,
+                    // drop onto the Stock tab instead, where there's
+                    // something to actually do while it spins up.
+                    onInitialLoadFailed: { selection = 1 }
                 )
             }
                 .tabItem { Label("Dashboard", systemImage: "house.fill") }

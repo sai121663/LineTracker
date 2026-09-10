@@ -7,6 +7,13 @@ struct DashboardView: View {
     @EnvironmentObject var auth: AuthManager
     var onAddStock: () -> Void = {}
     var onAddBet: () -> Void = {}
+    // Called only if the very first load on appear fails (a cold Render
+    // instance spinning up, most often) -- NOT on a later pull-to-refresh
+    // failure, so the app doesn't yank you off a tab you're already using.
+    // MainTabView uses this to drop you on the Stock tab instead of a
+    // dead Dashboard, so there's something to do (and something that
+    // itself pings the backend) while Render wakes up.
+    var onInitialLoadFailed: () -> Void = {}
     @State private var alerts: [Alert] = []
     @State private var loading = true
     @State private var errorMessage: String?
@@ -165,6 +172,7 @@ struct DashboardView: View {
         }
         .task {
             await load()
+            if errorMessage != nil { onInitialLoadFailed() }
             if wantsPush { await loadRecentTriggered() }
         }
         .onChange(of: wantsPush) { _, isOn in
