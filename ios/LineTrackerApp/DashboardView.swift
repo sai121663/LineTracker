@@ -115,7 +115,7 @@ struct DashboardView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .refreshable {
-                    await load()
+                    await load(isRefresh: true)
                     if wantsPush { await loadRecentTriggered() }
                 }
             }
@@ -206,12 +206,22 @@ struct DashboardView: View {
         }
     }
 
-    private func load() async {
-        loading = true
-        errorMessage = nil
+    // isRefresh: true (pull-to-refresh) must NOT touch @State before the
+    // await below. SwiftUI's .refreshable ties its Task to the pull
+    // gesture -- any state write before the network call finishes
+    // rebuilds the view mid-gesture and kills that Task, which surfaces
+    // here as a plain URLError.cancelled ("cancelled"), not a real
+    // network failure. .task's cold-start load isn't gesture-bound, so
+    // it can safely flip the spinner on up front.
+    private func load(isRefresh: Bool = false) async {
+        if !isRefresh { loading = true }
         do {
-            alerts = try await APIClient.shared.getAlerts()
+            let fetched = try await APIClient.shared.getAlerts()
+            guard !Task.isCancelled else { return }
+            alerts = fetched
+            errorMessage = nil
         } catch {
+            guard !Task.isCancelled else { return }
             // Was one blanket message for every failure -- network down,
             // timeout, a 500, or the response arriving fine but not
             // matching what Alert.swift expects, all looked identical on
@@ -224,7 +234,7 @@ struct DashboardView: View {
                 errorMessage = "Could not reach the backend: \(error.localizedDescription)"
             }
         }
-        loading = false
+        if !isRefresh { loading = false }
     }
 
     private func loadRecentTriggered() async {
