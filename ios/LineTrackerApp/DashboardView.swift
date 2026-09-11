@@ -118,6 +118,13 @@ struct DashboardView: View {
                     await load(isRefresh: true)
                     if wantsPush { await loadRecentTriggered() }
                 }
+                // The pull-to-refresh spinner is a system control and
+                // picks up its color from .tint -- without this it
+                // renders in a washed-out default gray that's nearly
+                // invisible against ltBackground's near-black. Reported:
+                // "no spinner at all" -- it was there, just impossible
+                // to actually see.
+                .tint(Color.ltAccent)
             }
         }
         // The title is drawn as ordinary content above (the `header`
