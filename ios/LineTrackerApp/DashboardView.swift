@@ -212,7 +212,17 @@ struct DashboardView: View {
         do {
             alerts = try await APIClient.shared.getAlerts()
         } catch {
-            errorMessage = "Could not reach the backend. Is it running?"
+            // Was one blanket message for every failure -- network down,
+            // timeout, a 500, or the response arriving fine but not
+            // matching what Alert.swift expects, all looked identical on
+            // screen. Surfacing what actually went wrong (a decode
+            // failure reads very differently from a timeout) instead of
+            // guessing from the outside next time this happens.
+            if error is DecodingError {
+                errorMessage = "Got a response, but couldn't read it: \(error)"
+            } else {
+                errorMessage = "Could not reach the backend: \(error.localizedDescription)"
+            }
         }
         loading = false
     }
