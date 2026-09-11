@@ -16,6 +16,7 @@ struct DashboardView: View {
     var onInitialLoadFailed: () -> Void = {}
     @State private var alerts: [Alert] = []
     @State private var loading = true
+    @State private var isRefreshing = false
     @State private var errorMessage: String?
     @State private var showSettings = false
 
@@ -184,11 +185,25 @@ struct DashboardView: View {
     // "+ Stock" / "+ Bet" quick-add buttons on the trailing edge.
     private var header: some View {
         HStack(alignment: .top, spacing: 16) {
-            Text("Your Dashboard")
-                .font(.system(size: 22, weight: .bold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                .foregroundStyle(Color.ltTextPrimary)
+            HStack(spacing: 8) {
+                Text("Your Dashboard")
+                    .font(.system(size: 22, weight: .bold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .foregroundStyle(Color.ltTextPrimary)
+
+                // Pull-to-refresh's own system spinner is easy to miss
+                // (it's above the scroll content, out of view once
+                // you've pulled past it) and disappears fast on a quick
+                // response. This sits right next to the title instead,
+                // so a refresh is visibly happening for its whole
+                // duration -- always present, just invisible when idle,
+                // so toggling it is a value change, not adding/removing
+                // a view.
+                ProgressView()
+                    .tint(Color.ltTextSecondary)
+                    .opacity(isRefreshing ? 1 : 0)
+            }
 
             Spacer(minLength: 8)
 
@@ -206,15 +221,24 @@ struct DashboardView: View {
         }
     }
 
-    // isRefresh: true (pull-to-refresh) must NOT touch @State before the
-    // await below. SwiftUI's .refreshable ties its Task to the pull
-    // gesture -- any state write before the network call finishes
-    // rebuilds the view mid-gesture and kills that Task, which surfaces
-    // here as a plain URLError.cancelled ("cancelled"), not a real
-    // network failure. .task's cold-start load isn't gesture-bound, so
-    // it can safely flip the spinner on up front.
+    // isRefresh: true (pull-to-refresh) must not touch @State on the
+    // very first line, before any suspension point. SwiftUI's
+    // .refreshable ties its Task to the pull gesture still resolving on
+    // screen -- a state write right then rebuilds the view mid-gesture
+    // and kills that Task, which surfaced as a plain URLError.cancelled
+    // ("cancelled"), not a real network failure. await Task.yield()
+    // gives the gesture a full run-loop turn to finish registering
+    // before isRefreshing flips, same trick, applied to the visible
+    // indicator this time instead of skipping it. .task's cold-start
+    // load isn't gesture-bound, so it can flip the spinner on up front
+    // as before.
     private func load(isRefresh: Bool = false) async {
-        if !isRefresh { loading = true }
+        if isRefresh {
+            await Task.yield()
+            isRefreshing = true
+        } else {
+            loading = true
+        }
         do {
             let fetched = try await APIClient.shared.getAlerts()
             guard !Task.isCancelled else { return }
@@ -234,7 +258,7 @@ struct DashboardView: View {
                 errorMessage = "Could not reach the backend: \(error.localizedDescription)"
             }
         }
-        if !isRefresh { loading = false }
+        if isRefresh { isRefreshing = false } else { loading = false }
     }
 
     private func loadRecentTriggered() async {
