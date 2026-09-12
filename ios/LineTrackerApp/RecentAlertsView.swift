@@ -58,9 +58,19 @@ private struct RecentAlertRow: View {
         isStock ? (alert.ticker ?? "—") : (alert.outcomeName ?? "\(alert.homeTeam ?? "") vs \(alert.awayTeam ?? "")")
     }
 
-    private var hitText: String {
+    // ABOVE/BELOW called out in caps + color (green/red) so the direction
+    // reads at a glance instead of blending into the rest of the line --
+    // Text values keep their own .foregroundColor when concatenated with
+    // +, even though the row below also sets a default color for the
+    // rest of the sentence.
+    private var hitText: Text {
         let target = isStock ? Formatting.dollars(alert.targetValue) : Formatting.odds(alert.targetValue)
-        return "Crossed \(alert.direction == "above" ? "above" : "below") \(target)"
+        let isAbove = alert.direction == "above"
+        return Text("Crossed ")
+            + Text(isAbove ? "ABOVE" : "BELOW")
+                .fontWeight(.bold)
+                .foregroundColor(isAbove ? Color.ltSuccess : Color.ltDanger)
+            + Text(" \(target)")
     }
 
     /// Same lookup as AlertCard's leadingLogoURL (DashboardView.swift) --
@@ -106,7 +116,7 @@ private struct RecentAlertRow: View {
                 Text(title)
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Color.ltTextPrimary)
-                Text(hitText)
+                hitText
                     .font(.system(size: 12))
                     .foregroundStyle(Color.ltTextSecondary)
             }
