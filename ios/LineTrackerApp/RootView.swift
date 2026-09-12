@@ -31,7 +31,7 @@ struct MainTabView: View {
                     onInitialLoadFailed: { selection = 1 }
                 )
             }
-                .tabItem { Label("Dashboard", systemImage: "house.fill") }
+                .tabItem { Label("Home", systemImage: "house.fill") }
                 .tag(0)
 
             NavigationStack { StockSearchView(onSaved: { selection = 0 }) }
