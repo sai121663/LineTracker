@@ -13,8 +13,11 @@ import UserNotifications
 /// token endpoint exists yet — see poll_alerts' send_email_func pattern
 /// for where a send_push_func would plug in) -- it only gates the bell
 /// icon feed on the Dashboard for now, not a real push notification.
-/// Text is a UI placeholder only — SMS needs a provider (e.g. Twilio)
-/// and phone verification we haven't built.
+/// No Text/SMS option — there's no free, reliable way to send real
+/// text messages (carrier email-to-SMS gateways are largely shut down,
+/// and a real SMS API like Twilio is pay-per-message beyond a
+/// verified-numbers-only trial), so it isn't offered even as a
+/// placeholder.
 struct SettingsView: View {
     @EnvironmentObject var auth: AuthManager
     @Environment(\.dismiss) private var dismiss
@@ -115,8 +118,6 @@ struct SettingsView: View {
                         )
                         Divider().overlay(Color.ltBorder)
                         pushRow
-                        Divider().overlay(Color.ltBorder)
-                        textRow
                     }
 
                     section(title: "About") {
@@ -238,37 +239,6 @@ struct SettingsView: View {
         .onTapGesture {
             if pushAuthStatus == .denied { openSystemSettings() }
         }
-    }
-
-    // MARK: - Text (placeholder — no SMS provider wired up yet)
-
-    private var textRow: some View {
-        HStack(spacing: 12) {
-            iconBadge("message.fill")
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 6) {
-                    Text("Text Alerts")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.ltTextPrimary)
-                    Text("COMING SOON")
-                        .font(.system(size: 9, weight: .bold))
-                        .tracking(0.5)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.ltSurface, in: Capsule())
-                        .foregroundStyle(Color.ltTextTertiary)
-                }
-                Text("Get a text the moment a target is hit")
-                    .font(.system(size: 12))
-                    .foregroundStyle(Color.ltTextSecondary)
-            }
-            Spacer()
-            Toggle("", isOn: .constant(false))
-                .labelsHidden()
-                .disabled(true)
-        }
-        .padding(.vertical, 4)
-        .opacity(0.55)
     }
 
     // MARK: - Shared row/section helpers
