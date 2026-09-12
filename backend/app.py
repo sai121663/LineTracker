@@ -710,7 +710,7 @@ scheduler = APScheduler()
 scheduler.init_app(app)
 
 
-@scheduler.task("interval", id="poll_alerts_job", minutes=3)
+@scheduler.task("interval", id="poll_alerts_job", seconds=90)
 def scheduled_poll():
     poll_alerts(app, db, Alert, SHARP_API_KEY, send_email_func=send_alert_email, UserSettings=UserSettings)
 
